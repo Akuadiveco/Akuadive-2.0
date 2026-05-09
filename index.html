@@ -70,7 +70,7 @@
             </div>
             <div>
                 <h1 class="text-lg font-black tracking-tighter leading-none text-white">AKUA DIVE</h1>
-                <p class="text-[9px] text-sky-400 font-bold tracking-[0.3em] uppercase mt-1">MODULAR OS v6.2</p>
+                <p class="text-[9px] text-sky-400 font-bold tracking-[0.3em] uppercase mt-1">MODULAR OS v6.2.1</p>
             </div>
         </div>
         <button id="btnConnect" class="bg-slate-800 text-white px-5 py-2.5 rounded-full font-black text-[10px] border border-slate-700 flex items-center gap-2 active:scale-95 transition-all">
@@ -284,6 +284,7 @@
                     <span class="text-[9px] font-black text-slate-500 tracking-widest uppercase mb-2">KUTU DENGE DURUMU</span>
                     <span id="valEgm" class="text-xs font-black text-purple-400">--</span>
                 </div>
+                <!-- CO Dikey Barı -->
                 <div id="card-co" style="display: none;" class="card p-4 flex justify-between items-center bg-orange-900/10 border-orange-500/20">
                     <div class="flex flex-col gap-1">
                         <span class="text-[9px] font-black text-slate-500 tracking-widest uppercase">CO (PPM)</span>
@@ -426,7 +427,7 @@
     </main>
 
     <script>
-        // CSS Yüklenme Kontrolü
+        // CSS Yüklenme Kontrolü (iPhone için Fail-safe)
         window.onload = function() {
             if (typeof tailwind === 'undefined') {
                 document.getElementById('css-warning').style.display = 'block';
@@ -443,7 +444,7 @@
         let runtimeSec=parseInt(localStorage.getItem('akuadive_runtime')||'0'), runtimeInt=null;
         let hardwareState={light:false, camera:false}, currentAIResponseText="";
 
-        // --- MODÜL YÖNETİMİ ---
+        // --- MODÜL YÖNETİMİ (Eski UI) ---
         let userModules = JSON.parse(localStorage.getItem('akuadive_modules')) || { depth: false, co: false, bio: false, hw: false, gps: false };
 
         function initModules() {
@@ -475,14 +476,12 @@
                 document.getElementById('wrapper-depth').style.display = 'none'; 
                 document.getElementById('wrapper-chart').style.display = 'none'; 
             }
-            
             if(userModules.bio) {
                 document.getElementById('wrapper-bio').style.display = 'grid';
                 document.getElementById('wrapper-bio').classList.remove('hidden'); 
             } else {
                 document.getElementById('wrapper-bio').style.display = 'none';
             }
-
             const mpuCard = document.getElementById('card-mpu');
             if(userModules.co) { 
                 document.getElementById('card-co').style.display = 'flex'; 
@@ -492,14 +491,12 @@
                 document.getElementById('card-co').style.display = 'none'; 
                 mpuCard.classList.add('col-span-2'); 
             }
-
             if(userModules.hw) {
                 document.getElementById('wrapper-hw-controls').style.display = 'block';
                 document.getElementById('wrapper-hw-controls').classList.remove('hidden'); 
             } else {
                 document.getElementById('wrapper-hw-controls').style.display = 'none';
             }
-
             if(userModules.gps) {
                 document.getElementById('tab-map').style.display = 'inline-block';
                 document.getElementById('tab-map').classList.remove('hidden'); 
@@ -512,9 +509,7 @@
             document.getElementById('module-modal').style.display = 'flex'; 
             document.getElementById('module-modal').classList.remove('hidden'); 
         }
-        function closeModuleModal() { 
-            document.getElementById('module-modal').style.display = 'none'; 
-        }
+        function closeModuleModal() { document.getElementById('module-modal').style.display = 'none'; }
 
         window.addEventListener('DOMContentLoaded', () => { initModules(); initChart(); });
 
@@ -598,32 +593,92 @@
             area.style.display = area.style.display === 'none' ? 'block' : 'none'; 
         };
 
-        // --- VERİ İŞLEME (KMP VE BAT SENSÖRLERİ) ---
+        // --- YENİ DATA PARSER (Arduino Koduna Uyumlu) ---
         function handleData(event) {
             const val = new TextDecoder().decode(event.target.value);
+            
+            // Regex ile ayıklama fonksiyonu
             const getVal = (reg) => { const m = val.match(reg); return m ? m[1] : null; };
 
-            if(val.includes("MOD:ACIK")){ if(!runtimeInt) runtimeInt=setInterval(()=>{runtimeSec++; renderRT();},1000); } else if(val.includes("MOD:KAPALI")){ clearInterval(runtimeInt); runtimeInt=null; }
+            // 1. Çalışma Süresi Kontrolü
+            if(val.includes("MOD:ACIK")){ if(!runtimeInt) runtimeInt=setInterval(()=>{runtimeSec++; renderRT();},1000); } 
+            else if(val.includes("MOD:KAPALI")){ clearInterval(runtimeInt); runtimeInt=null; }
 
-            // KOMPRESÖR Sensörleri 
-            const kmpDht = val.match(/KMP_DHT:([0-9.-]+)C\/\%([0-9.]+)/) || val.match(/DHT:([0-9.-]+)C\/\%([0-9.]+)/);
-            if(kmpDht) { document.getElementById('valKmpIsi').innerText = kmpDht[1] + "°"; document.getElementById('valKmpNem').innerText = "%" + kmpDht[2]; }
-            const kmpNtc = getVal(/KMP_NTC:([0-9.-]+)C/) || getVal(/NTC:([0-9.-]+)C/);
-            if(kmpNtc && kmpNtc !== "-999") document.getElementById('valKmpNtc').innerText = kmpNtc + "°";
-            if(val.includes("KMP_SU:VAR") || val.includes("Su:VAR")){ document.getElementById('valKmpSu').innerText="VAR"; document.getElementById('valKmpSu').className="text-[10px] font-black text-red-500 animate-pulse tracking-widest"; }
-            else if(val.includes("KMP_SU:YOK") || val.includes("Su:YOK")){ document.getElementById('valKmpSu').innerText="YOK"; document.getElementById('valKmpSu').className="text-[10px] font-black text-emerald-400 tracking-widest"; }
+            // 2. Güç (Voltaj, Yüzde ve Süre Hesaplama) - Arduino "GUC:12.4V" gönderir. (3S Lipo: 9.6V boş, 12.6V dolu baz alınmıştır)
+            const volt = getVal(/GUC:([0-9.]+)V/);
+            if(volt) { 
+                const v = parseFloat(volt);
+                const pct = Math.max(0, Math.min(100, ((v - 9.6) / 3.0) * 100)); 
+                document.getElementById('valGucYuzde').innerText = Math.round(pct) + "%"; 
+                document.getElementById('valGucSure').innerText = `Kalan: ${Math.floor(pct * 1.8 / 60)} sa ${Math.floor(pct * 1.8 % 60)} dk`; 
+            }
+            
+            // 3. Basınç ve Limitler
+            const bsn = getVal(/BSN:([0-9.]+)B/); 
+            if(bsn) document.getElementById('valBsn').innerText = bsn;
 
-            // BATARYA Sensörleri 
-            const batDht = val.match(/BAT_DHT:([0-9.-]+)C\/\%([0-9.]+)/);
-            if(batDht) { document.getElementById('valBatIsi').innerText = batDht[1] + "°"; document.getElementById('valBatNem').innerText = "%" + batDht[2]; }
-            const batNtc = getVal(/BAT_NTC:([0-9.-]+)C/);
-            if(batNtc && batNtc !== "-999") document.getElementById('valBatNtc').innerText = batNtc + "°";
-            if(val.includes("BAT_SU:VAR")){ document.getElementById('valBatSu').innerText="VAR"; document.getElementById('valBatSu').className="text-[10px] font-black text-red-500 animate-pulse tracking-widest"; }
-            else if(val.includes("BAT_SU:YOK")){ document.getElementById('valBatSu').innerText="YOK"; document.getElementById('valBatSu').className="text-[10px] font-black text-emerald-400 tracking-widest"; }
+            const lmtMatch = val.match(/LMT:([0-9.]+)-([0-9.]+)B/);
+            if(lmtMatch) document.getElementById('valLmt').innerText = `Bar (Lmt: ${lmtMatch[1]}/${lmtMatch[2]})`;
 
-            // Modüler Sensörler 
+            // 4. MPU (Eğim)
+            const egm = getVal(/EGM:([^\n]+)/); 
+            if(egm) document.getElementById('valEgm').innerText = egm.trim();
+
+            // 5. Alarm Kontrolü
+            const alarm = getVal(/ALRM:([^\n]+)/);
+            if(alarm) {
+                const cards = { 'bsn': document.getElementById('card-basinc'), 'mpu': document.getElementById('card-mpu'), 'pulse': document.getElementById('card-pulse') };
+                if(alarm !== "YOK") {
+                    if(alarm !== lastAlarm && navigator.vibrate) navigator.vibrate([300, 100, 300]);
+                    if(alarm.includes("DEVRILME")) cards.mpu.classList.add('alarm-active');
+                    if(alarm.includes("NABIZ") && cards.pulse) cards.pulse.classList.add('alarm-active');
+                    if(alarm !== lastAlarm) addLog(alarm);
+                } else { Object.values(cards).forEach(c => c && c.classList.remove('alarm-active')); }
+                lastAlarm = alarm;
+            }
+
+            // 6. Kompresör Grubu Verileri (Blok okuma)
+            if (val.includes("--- KOMP ---")) {
+                const kompBlock = val.split("--- KOMP ---")[1].split("--- BAT ---")[0]; // Sadece komp kısmı
+                
+                const kDht = kompBlock.match(/DHT:([0-9.-]+)C\/\%([0-9.]+)/);
+                if (kDht) { document.getElementById('valKmpIsi').innerText = kDht[1] + "°"; document.getElementById('valKmpNem').innerText = "%" + kDht[2]; }
+                
+                const kNtc = kompBlock.match(/NTC:([0-9.-]+)C/);
+                if (kNtc) document.getElementById('valKmpNtc').innerText = kNtc[1] + "°";
+                
+                const kSu = kompBlock.match(/Su:(VAR|Yok)/i);
+                if (kSu) {
+                    const s = kSu[1].toUpperCase();
+                    document.getElementById('valKmpSu').innerText = s;
+                    document.getElementById('valKmpSu').className = s === "VAR" ? "text-[10px] font-black text-red-500 animate-pulse tracking-widest" : "text-[10px] font-black text-emerald-400 tracking-widest";
+                }
+            }
+
+            // 7. Batarya Grubu Verileri (Blok okuma)
+            if (val.includes("--- BAT ---")) {
+                const batBlock = val.split("--- BAT ---")[1].split("--- MPU ---")[0]; // Sadece batarya kısmı
+                
+                const bDht = batBlock.match(/DHT:([0-9.-]+)C\/\%([0-9.]+)/);
+                if (bDht) { document.getElementById('valBatIsi').innerText = bDht[1] + "°"; document.getElementById('valBatNem').innerText = "%" + bDht[2]; }
+                
+                const bNtc = batBlock.match(/NTC:([0-9.-]+)C/);
+                if (bNtc) document.getElementById('valBatNtc').innerText = bNtc[1] + "°";
+                
+                const bSu = batBlock.match(/Su:(VAR|Yok)/i);
+                if (bSu) {
+                    const s = bSu[1].toUpperCase();
+                    document.getElementById('valBatSu').innerText = s;
+                    document.getElementById('valBatSu').className = s === "VAR" ? "text-[10px] font-black text-red-500 animate-pulse tracking-widest" : "text-[10px] font-black text-emerald-400 tracking-widest";
+                }
+            }
+
+            // 8. Modüler Sensörler İçin Yedek Okuma (Daha sonra Arduino'ya eklenirse çalışır)
             const gpsParts = val.match(/GPS:([0-9.-]+),([0-9.-]+)/); if(gpsParts) updateMapLocation(parseFloat(gpsParts[1]), parseFloat(gpsParts[2]));
             const depth = getVal(/EXT_P:([0-9.]+)M/); if(depth) { document.getElementById('valDerinlik').innerText = depth; updateDepthChart(parseFloat(depth)); }
+            const wTemp = getVal(/W_TEMP:([0-9.]+)C/); if(wTemp) document.getElementById('valSuIsi').innerText = wTemp;
+            const pulse = getVal(/HR:([0-9.]+)B/); if(pulse) document.getElementById('valNabiz').innerText = pulse;
+            const o2 = getVal(/O2:([0-9.]+)P/); if(o2) document.getElementById('valOksijen').innerText = o2;
             
             const coPpm = getVal(/CO_PPM:([0-9]+)/);
             if(coPpm) {
@@ -633,26 +688,6 @@
                 if(ppm > 50) { barFill.className="vertical-bar-fill bg-red-500"; document.getElementById('valCoText').className="text-lg font-black text-red-500 leading-none"; coStatus.innerText="TEHLİKE"; coStatus.className="text-[8px] font-bold text-red-500 uppercase tracking-widest mt-1"; cardCo.classList.add('alarm-active'); }
                 else if(ppm > 20) { barFill.className="vertical-bar-fill bg-orange-400"; document.getElementById('valCoText').className="text-lg font-black text-orange-400 leading-none"; coStatus.innerText="DİKKAT"; coStatus.className="text-[8px] font-bold text-orange-400 uppercase tracking-widest mt-1"; cardCo.classList.remove('alarm-active'); }
                 else { barFill.className="vertical-bar-fill bg-emerald-500"; document.getElementById('valCoText').className="text-lg font-black text-emerald-400 leading-none"; coStatus.innerText="NORMAL"; coStatus.className="text-[8px] font-bold text-emerald-600 uppercase tracking-widest mt-1"; cardCo.classList.remove('alarm-active'); }
-            }
-
-            const volt = getVal(/GUC:([0-9.]+)V/);
-            if(volt) { const pct = Math.max(0, Math.min(100, ((parseFloat(volt) - 9.6) / 3) * 100)); document.getElementById('valGucYuzde').innerText = Math.round(pct) + "%"; document.getElementById('valGucSure').innerText = `Kalan: ${Math.floor(pct * 1.8 / 60)} sa ${Math.floor(pct * 1.8 % 60)} dk`; }
-            
-            const bsn = getVal(/BSN:([0-9.]+)B/); if(bsn) document.getElementById('valBsn').innerText = bsn;
-            const wTemp = getVal(/W_TEMP:([0-9.]+)C/); if(wTemp) document.getElementById('valSuIsi').innerText = wTemp;
-            const pulse = getVal(/HR:([0-9.]+)B/); if(pulse) document.getElementById('valNabiz').innerText = pulse;
-            const egm = getVal(/EGM:([^\n]+)/); if(egm) document.getElementById('valEgm').innerText = egm;
-            
-            const alarm = getVal(/ALRM:([^\n]+)/);
-            if(alarm) {
-                const cards = { 'bsn': document.getElementById('card-basinc'), 'mpu': document.getElementById('card-mpu'), 'pulse': document.getElementById('card-pulse') };
-                if(alarm !== "YOK") {
-                    if(alarm !== lastAlarm && navigator.vibrate) navigator.vibrate([300, 100, 300]);
-                    if(alarm.includes("DEVRILME")) cards.mpu.classList.add('alarm-active');
-                    if(alarm.includes("NABIZ")) cards.pulse.classList.add('alarm-active');
-                    if(alarm !== lastAlarm) addLog(alarm);
-                } else { Object.values(cards).forEach(c => c.classList.remove('alarm-active')); }
-                lastAlarm = alarm;
             }
         }
 
