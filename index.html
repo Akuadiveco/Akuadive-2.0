@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#020617">
+    <title>Akua Dive S3 Tactical OS</title>
+    
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M15 85C25 65 35 40 50 15C65 40 75 65 85 85H68C65 75 62 68 58 62C55 58 52 56 48 58C44 60 41 68 38 85H15Z' fill='%233b82f6'/></svg>">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;600;800&display=swap');
+
+        :root { --akua-blue: #0ea5e9; --akua-danger: #ef4444; }
+        body { background-color: #020617; color: #f8fafc; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; user-select: none; }
+        h1, .tactical-font { font-family: 'Orbitron', sans-serif; }
+        
+        .card { background-color: #0f172a; border-radius: 1.25rem; border: 1px solid #1e293b; transition: all 0.2s ease; overflow: hidden; }
+        
+        @keyframes alert-pulse { 
+            0%, 100% { background-color: #0f172a; border-color: #1e293b; } 
+            50% { background-color: #450a0a; border-color: #ef4444; box-shadow: 0 0 20px rgba(239, 68, 68, 0.2); } 
+        }
+        .alarm-active { animation: alert-pulse 0.7s infinite !important; }
+
+        .glass-header { background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(20px); border-bottom: 1px solid #1e293b; }
+        .tab-btn.active { color: var(--akua-blue); border-bottom: 3px solid var(--akua-blue); font-weight: 800; }
+        .akua-logo-svg { width: 38px; height: 38px; filter: drop-shadow(0 0 8px rgba(14, 165, 233, 0.4)); }
+        
+        .vertical-bar-container { width: 14px; height: 60px; background: #1e293b; border-radius: 8px; overflow: hidden; position: relative; border: 1px solid #334155; }
+        .vertical-bar-fill { position: absolute; bottom: 0; left: 0; width: 100%; height: 0%; transition: height 0.5s ease, background-color 0.5s ease; }
+
+        .ai-btn { background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%); transition: all 0.3s ease; }
+        .toggle-active { background-color: #0ea5e9 !important; color: white !important; box-shadow: 0 0 15px rgba(14, 165, 233, 0.4); }
+
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .shimmer { background: linear-gradient(90deg, #0f172a 25%, #1e293b 50%, #0f172a 75%); background-size: 200% 100%; animation: shimmer-anim 1.5s infinite; }
+        @keyframes shimmer-anim { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden">
+
+    <header class="glass-header z-50 p-4 sticky top-0 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+            <div class="akua-logo-svg">
+                <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M15 85C25 65 35 40 50 15C65 40 75 65 85 85H68C65 75 62 68 58 62C55 58 52 56 48 58C44 60 41 68 38 85H15Z" fill="url(#logoGradient)" />
+                    <defs>
+                        <linearGradient id="logoGradient" x1="50" y1="15" x2="50" y2="85" gradientUnits="userSpaceOnUse">
+                            <stop stop-color="#38bdf8" />
+                            <stop offset="1" stop-color="#0ea5e9" />
+                        </linearGradient>
+                    </defs>
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-lg font-black tracking-tighter leading-none text-white">AKUA DIVE</h1>
+                <p class="text-[9px] text-sky-400 font-bold tracking-[0.3em] uppercase mt-1">S3 Tactical OS</p>
+            </div>
+        </div>
+        <button id="btnConnect" class="bg-slate-800 text-white px-5 py-2.5 rounded-full font-black text-[10px] border border-slate-700 flex items-center gap-2 active:scale-95 transition-all">
+            <i class="fa-brands fa-bluetooth-b text-sky-400"></i> <span id="connectText">BAĞLAN</span>
+        </button>
+    </header>
+
+    <div id="msg-box" class="fixed top-24 left-1/2 -translate-x-1/2 bg-slate-900 border border-sky-500/30 text-white px-6 py-4 rounded-3xl shadow-2xl z-[100] flex items-center gap-4 opacity-0 pointer-events-none transition-all duration-300">
+        <div class="p-2 rounded-full bg-sky-500/10"><i id="msg-icon" class="fa-solid fa-circle-info text-sky-400"></i></div>
+        <div>
+            <h4 id="msg-title" class="font-black text-[10px] uppercase tracking-widest">Sistem Bilgisi</h4>
+            <p id="msg-text" class="text-[10px] text-slate-400">Veri akışı bekleniyor...</p>
+        </div>
+    </div>
+
+    <!-- AI Modal -->
+    <div id="ai-modal" class="fixed inset-0 bg-black/95 z-[110] flex items-center justify-center p-5 hidden backdrop-blur-2xl">
+        <div class="bg-slate-900 w-full max-w-lg rounded-[2.5rem] border border-sky-500/20 overflow-hidden shadow-2xl flex flex-col max-h-[85vh]">
+            <div class="p-6 border-b border-white/5 flex justify-between items-center bg-sky-500/5">
+                <div class="flex items-center gap-3">
+                    <div class="w-6 h-6"><svg viewBox="0 0 100 100" fill="#0ea5e9"><path d="M15 85C25 65 35 40 50 15C65 40 75 65 85 85H68C65 75 62 68 58 62C55 58 52 56 48 58C44 60 41 68 38 85H15Z"/></svg></div>
+                    <h3 id="ai-modal-title" class="font-black text-[10px] tracking-[0.2em] text-sky-400 uppercase">Gemini AI</h3>
+                </div>
+                <button onclick="closeAIModal()" class="text-slate-500 hover:text-white"><i class="fa-solid fa-circle-xmark text-3xl"></i></button>
+            </div>
+            <div id="ai-content" class="p-8 overflow-y-auto text-sm leading-relaxed text-slate-300 font-medium">
+                <div class="space-y-4" id="ai-loading">
+                    <div class="h-4 shimmer rounded-full w-3/4"></div>
+                    <div class="h-4 shimmer rounded-full w-full"></div>
+                    <div class="h-4 shimmer rounded-full w-5/6"></div>
+                </div>
+            </div>
+            <div class="p-4 bg-black/40 border-t border-white/5 flex justify-between items-center">
+                <button id="ai-tts-btn" onclick="speakAIResponse()" class="hidden bg-sky-600/20 text-sky-400 px-4 py-2 rounded-full text-[10px] font-black uppercase flex items-center gap-2">
+                    <i class="fa-solid fa-volume-high"></i> ✨ Seslendir
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <main class="flex-1 overflow-y-auto p-4 pb-32">
+        <!-- MENÜ -->
+        <div class="flex gap-4 border-b border-white/5 mb-5 overflow-x-auto pb-2 scrollbar-hide whitespace-nowrap">
+            <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-btn active pb-2 text-[10px] font-black uppercase tracking-[0.1em] transition-all">OPERASYON</button>
+            <button onclick="switchTab('controls')" id="tab-controls" class="tab-btn pb-2 text-[10px] font-black uppercase tracking-[0.1em] transition-all text-slate-500">KONTROL</button>
+            <button onclick="switchTab('map')" id="tab-map" class="tab-btn pb-2 text-[10px] font-black uppercase tracking-[0.1em] transition-all text-slate-500">HARİTA/KONUM</button>
+            <button onclick="switchTab('planner')" id="tab-planner" class="tab-btn pb-2 text-[10px] font-black uppercase tracking-[0.1em] transition-all text-slate-500">PLANLAYICI</button>
+            <button onclick="switchTab('logs')" id="tab-logs" class="tab-btn pb-2 text-[10px] font-black uppercase tracking-[0.1em] transition-all text-slate-500">KAYITLAR</button>
+        </div>
+
+        <!-- 1. OPERASYON SEKMESİ -->
+        <div id="view-dashboard" class="space-y-4">
+            <div class="grid grid-cols-2 gap-3">
+                <div id="card-depth" class="card p-5 flex flex-col items-center justify-center bg-blue-900/10 border-blue-500/30">
+                    <span class="text-[10px] text-blue-400 font-black mb-1 tracking-widest uppercase">DERİNLİK</span>
+                    <div class="flex items-baseline gap-1">
+                        <span id="valDerinlik" class="text-4xl font-black text-white">0.0</span>
+                        <span class="text-xs font-bold text-blue-400">MT</span>
+                    </div>
+                </div>
+                <div id="card-watertemp" class="card p-5 flex flex-col items-center justify-center bg-cyan-900/10 border-cyan-500/30">
+                    <span class="text-[10px] text-cyan-400 font-black mb-1 tracking-widest uppercase">SU SICAKLIĞI</span>
+                    <div class="flex items-baseline gap-1">
+                        <span id="valSuIsi" class="text-4xl font-black text-white">--</span>
+                        <span class="text-xs font-bold text-cyan-400">°C</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card p-3 bg-slate-900/40">
+                <div class="flex justify-between items-center mb-1 px-1">
+                    <span class="text-[9px] font-black text-slate-500 tracking-widest uppercase"><i class="fa-solid fa-chart-area text-blue-500"></i> Derinlik Profili</span>
+                </div>
+                <div class="h-24 w-full"><canvas id="depthChart"></canvas></div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div id="card-voltaj" class="card p-5 flex flex-col items-center justify-center">
+                    <span class="text-[10px] text-slate-500 font-black mb-1 tracking-widest uppercase">BATARYA</span>
+                    <span id="valGucYuzde" class="text-4xl font-black text-emerald-400">--%</span>
+                    <span id="valGucSure" class="text-[9px] text-emerald-600 font-black mt-2 tracking-widest lowercase">Kalan: -- sa -- dk</span>
+                </div>
+                <div id="card-basinc" class="card p-5 flex flex-col items-center justify-center relative">
+                    <span class="text-[10px] text-slate-500 font-black mb-1 tracking-widest uppercase">KUTU BASINCI</span>
+                    <span id="valBsn" class="text-4xl font-black text-sky-400">--</span>
+                    <span id="valLmt" class="text-[9px] text-sky-500/70 font-black tracking-widest mt-2 bg-sky-900/30 px-2 py-0.5 rounded">Bar (Lmt: --/--)</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div id="card-pulse" class="card p-5 flex flex-col items-center justify-center bg-rose-950/10 border-rose-500/20">
+                    <span class="text-[10px] text-rose-500 font-black mb-1 tracking-widest uppercase"><i class="fa-solid fa-heart-pulse"></i> DALGIÇ NABIZ</span>
+                    <div class="flex items-baseline gap-1">
+                        <span id="valNabiz" class="text-3xl font-black text-rose-400">--</span>
+                        <span class="text-[10px] font-bold text-slate-500">BPM</span>
+                    </div>
+                </div>
+                <div id="card-o2" class="card p-5 flex flex-col items-center justify-center bg-teal-950/10 border-teal-500/20">
+                    <span class="text-[10px] text-teal-500 font-black mb-1 tracking-widest uppercase"><i class="fa-solid fa-lungs"></i> OKSİJEN</span>
+                    <div class="flex items-baseline gap-1">
+                        <span id="valOksijen" class="text-3xl font-black text-teal-400">--</span>
+                        <span class="text-[10px] font-bold text-slate-500">%</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div id="card-mpu" class="card p-4 flex flex-col items-center justify-center bg-purple-900/10 border-purple-500/20 text-center">
+                    <span class="text-[9px] font-black text-slate-500 tracking-widest uppercase mb-2">DENGE DURUMU</span>
+                    <span id="valEgm" class="text-xs font-black text-purple-400">--</span>
+                </div>
+                <div id="card-co" class="card p-4 flex justify-between items-center bg-orange-900/10 border-orange-500/20">
+                    <div class="flex flex-col gap-1">
+                        <span class="text-[9px] font-black text-slate-500 tracking-widest uppercase">CO (PPM)</span>
+                        <span id="valCoText" class="text-lg font-black text-emerald-400 leading-none">0</span>
+                        <span id="valCoStatus" class="text-[8px] font-bold text-emerald-600 uppercase tracking-widest mt-1">Normal</span>
+                    </div>
+                    <div class="vertical-bar-container"><div id="coBarFill" class="vertical-bar-fill bg-emerald-500"></div></div>
+                </div>
+            </div>
+
+            <div class="pt-2 space-y-3">
+                <button onclick="analyzeSystemWithAI()" class="ai-btn w-full text-white p-4 rounded-xl font-black text-[11px] tracking-widest shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-transform">
+                    <i class="fa-solid fa-stethoscope text-lg"></i> ✨ YAPAY ZEKA DURUM ANALİZİ
+                </button>
+            </div>
+        </div>
+
+        <!-- 2. KONTROLLER SEKMESİ -->
+        <div id="view-controls" class="hidden space-y-4">
+            <h3 class="text-xs font-black text-slate-500 uppercase tracking-widest ml-1 mb-2">Donanım Kontrolleri</h3>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <button id="btnLight" onclick="toggleHardware('light')" class="card p-6 flex flex-col items-center gap-3 bg-slate-900 border-slate-800 transition-all">
+                    <i class="fa-solid fa-lightbulb text-2xl"></i>
+                    <div class="text-center">
+                        <span class="block text-[11px] font-black uppercase tracking-widest">Sualtı Aydınlatma</span>
+                        <span id="statusLight" class="text-[9px] font-bold text-slate-500 uppercase">Kapalı</span>
+                    </div>
+                </button>
+                <button id="btnCamera" onclick="toggleHardware('camera')" class="card p-6 flex flex-col items-center gap-3 bg-slate-900 border-slate-800 transition-all">
+                    <i class="fa-solid fa-video text-2xl"></i>
+                    <div class="text-center">
+                        <span class="block text-[11px] font-black uppercase tracking-widest">Kamera Kaydı</span>
+                        <span id="statusCamera" class="text-[9px] font-bold text-slate-500 uppercase">Beklemede</span>
+                    </div>
+                </button>
+            </div>
+
+            <div class="card p-5 space-y-4">
+                <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-white/5 pb-2">Donanım Testleri</h4>
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="sendCmd('b.test')" class="bg-slate-800 border border-slate-700 p-4 rounded-xl flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-widest active:bg-slate-700">
+                        <i class="fa-solid fa-volume-high text-sky-400"></i> SES TESTİ
+                    </button>
+                    <button onclick="sendCmd('t.test')" class="bg-slate-800 border border-slate-700 p-4 rounded-xl flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-widest active:bg-slate-700">
+                        <i class="fa-solid fa-vibration text-purple-400"></i> TİTREŞİM
+                    </button>
+                </div>
+            </div>
+
+            <button onclick="generateEmergencyProtocol()" class="w-full bg-red-900/30 border border-red-500/50 text-red-400 p-4 rounded-xl font-black text-[11px] tracking-widest shadow-lg flex items-center justify-center gap-3 active:bg-red-800/50 animate-pulse">
+                <i class="fa-solid fa-triangle-exclamation"></i> 🚨 ACİL DURUM PROTOKOLÜ
+            </button>
+            
+            <div class="card p-5 border-sky-500/20 bg-sky-950/10">
+                <span class="text-[10px] text-sky-400 font-black uppercase block mb-3">Hava Basıncı Limit Ayarı</span>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="flex gap-2">
+                        <input type="number" id="inputLow" class="bg-black/40 border border-white/5 text-white p-2 rounded-lg w-full text-xs outline-none" placeholder="Alt">
+                        <button onclick="setLimit('low')" class="bg-sky-600/20 text-sky-400 px-3 rounded-lg text-[10px] font-black border border-sky-500/30">OK</button>
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="number" id="inputHigh" class="bg-black/40 border border-white/5 text-white p-2 rounded-lg w-full text-xs outline-none" placeholder="Üst">
+                        <button onclick="setLimit('high')" class="bg-sky-600/20 text-sky-400 px-3 rounded-lg text-[10px] font-black border border-sky-500/30">OK</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-2 opacity-60 hover:opacity-100 transition-opacity">
+                <button id="toggleService" class="w-full text-[10px] text-slate-500 font-black tracking-[0.4em] uppercase py-3 border border-dashed border-slate-700 rounded-xl">SERVİS ERİŞİMİ</button>
+                <div id="service-area" class="hidden mt-4 animate-in slide-in-from-bottom-2">
+                    <div class="card p-5 border-orange-500/20 bg-orange-950/10 text-center">
+                        <button onclick="sendCmd('mpu.reset')" class="w-full bg-orange-600/80 text-white p-4 rounded-xl font-black text-[10px] tracking-widest">MPU SIFIRLA (KALİBRASYON)</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. HARİTA SEKMESİ -->
+        <div id="view-map" class="hidden space-y-4">
+            <div class="card p-3 bg-slate-900 border-slate-700 h-[60vh] relative">
+                <div id="map" class="w-full h-full rounded-lg z-10"></div>
+                <div class="absolute top-5 left-5 z-[500] bg-black/60 backdrop-blur-md p-3 rounded-xl border border-white/10">
+                    <div class="text-[9px] text-sky-400 font-black tracking-widest mb-1">SON KOORDİNAT</div>
+                    <div id="gps-lat" class="text-xs text-white font-mono">LAT: Bekleniyor</div>
+                    <div id="gps-lon" class="text-xs text-white font-mono">LON: Bekleniyor</div>
+                </div>
+            </div>
+            <button onclick="simulateGPS()" class="w-full bg-slate-800 text-sky-400 p-3 rounded-xl text-[10px] font-black border border-sky-900 active:scale-95 transition-transform">
+                <i class="fa-solid fa-satellite"></i> TEST KOORDİNATI GÖNDER (SİMÜLE ET)
+            </button>
+        </div>
+
+        <!-- 4. PLANLAYICI SEKMESİ -->
+        <div id="view-planner" class="hidden space-y-4">
+            <div class="card p-6 border-indigo-500/20 bg-indigo-950/10 text-center">
+                <div class="w-12 h-12 bg-indigo-500/20 rounded-full flex items-center justify-center mx-auto mb-3"><i class="fa-solid fa-map-location-dot text-indigo-400 text-xl"></i></div>
+                <h3 class="text-xs font-black text-indigo-300 uppercase tracking-widest mb-2">Operasyon Planlayıcı</h3>
+                <div class="space-y-3 mt-4">
+                    <button onclick="generatePreDiveChecklist()" class="w-full bg-teal-600/20 text-teal-300 p-4 rounded-xl font-black text-[10px] tracking-widest flex items-center justify-center gap-2 border border-teal-500/30 active:scale-95 transition-transform"><i class="fa-solid fa-clipboard-check text-lg"></i> ✨ DALIŞ ÖNCESİ KONTROL</button>
+                    <button onclick="planOperationWithAI()" class="w-full bg-indigo-600/20 text-indigo-300 p-4 rounded-xl font-black text-[10px] tracking-widest flex items-center justify-center gap-2 border border-indigo-500/30 active:scale-95 transition-transform"><i class="fa-solid fa-stopwatch text-lg"></i> ✨ RİSK VE SÜRE PLANI</button>
+                </div>
+            </div>
+            
+            <div class="card p-5 bg-indigo-900/20 border-indigo-500/20 mt-4">
+                <h3 class="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-3"><i class="fa-solid fa-vr-cardboard"></i> ✨ Senaryo Simülatörü</h3>
+                <div class="flex gap-2">
+                    <input type="text" id="ai-scenario-input" placeholder="✨ Ne olursa ne yapmalıyım?" class="bg-black/40 border border-white/5 text-white p-3 rounded-xl w-full text-xs outline-none focus:border-indigo-500">
+                    <button onclick="simulateScenarioWithAI()" class="bg-indigo-600 text-white px-5 rounded-xl active:scale-95 transition-all"><i class="fa-solid fa-bolt"></i></button>
+                </div>
+            </div>
+
+            <div class="card p-5 bg-slate-900/40 border-sky-500/20 mt-4">
+                <h3 class="text-[10px] font-black text-sky-500 uppercase tracking-widest mb-3"><i class="fa-solid fa-wrench"></i> Teknik Danışman</h3>
+                <div class="flex gap-2">
+                    <input type="text" id="ai-problem-input" placeholder="✨ Arıza Sor: Örn: Işıklar yanmıyor" class="bg-black/40 border border-white/5 text-white p-3 rounded-xl w-full text-xs outline-none focus:border-sky-500">
+                    <button onclick="troubleshootWithAI()" class="bg-sky-600 text-white px-5 rounded-xl active:scale-95 transition-all"><i class="fa-solid fa-paper-plane"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. KAYITLAR SEKMESİ -->
+        <div id="view-logs" class="hidden space-y-4">
+            <div class="card p-8 text-center bg-emerald-950/10 border-emerald-500/20">
+                <span class="text-[9px] text-emerald-500 font-black tracking-[0.3em] uppercase mb-2 block">Toplam Görev Süresi</span>
+                <div class="text-4xl font-black text-white tactical-font" id="totalRuntimeDisplay">0s</div>
+                <button onclick="resetRuntime()" class="mt-4 text-[9px] text-slate-600 hover:text-red-500 font-black tracking-widest uppercase border border-white/5 px-4 py-1.5 rounded-full transition-colors">Sıfırla</button>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="analyzeLogsWithAI()" class="bg-slate-800 text-sky-400 p-4 rounded-xl font-black text-[10px] tracking-widest border border-sky-500/20 flex flex-col items-center justify-center gap-2 text-center active:scale-95 transition-transform">
+                    <i class="fa-solid fa-chart-line text-lg"></i> <span class="leading-tight">✨ GEÇMİŞİ<br>ANALİZ ET</span>
+                </button>
+                <button onclick="generateEndOfDayReport()" class="bg-slate-800 text-emerald-400 p-4 rounded-xl font-black text-[10px] tracking-widest border border-emerald-500/20 flex flex-col items-center justify-center gap-2 text-center active:scale-95 transition-transform">
+                    <i class="fa-solid fa-file-contract text-lg"></i> <span class="leading-tight">✨ GÜN SONU<br>RAPORU</span>
+                </button>
+            </div>
+            <div id="logsContainer" class="space-y-2 mt-4"></div>
+        </div>
+    </main>
+
+    <script>
+        const apiKey = ""; 
+        const GEMINI_MODEL = "gemini-2.5-flash-preview-09-2025";
+        const SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
+        const CHARACTERISTIC_RX_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
+        const CHARACTERISTIC_TX_UUID = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
+
+        let bleDevice = null;
+        let rxChar = null;
+        let lastAlarm = "YOK";
+        let errorLogs = JSON.parse(localStorage.getItem('akuadive_logs') || '[]');
+        let runtimeSec = parseInt(localStorage.getItem('akuadive_runtime') || '0');
+        let runtimeInt = null;
+        let hardwareState = { light: false, camera: false };
+        let currentAIResponseText = "";
+
+        // --- HARİTA YÖNETİMİ ---
+        let diveMap;
+        let marker;
+        function initMap() {
+            if(diveMap) return; 
+            diveMap = L.map('map').setView([38.4237, 27.1428], 13);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OpenStreetMap',
+                maxZoom: 19
+            }).addTo(diveMap);
+            
+            var customIcon = L.icon({
+                iconUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><path fill="%230ea5e9" d="M168.3 499.2C116.1 435 0 279.4 0 192C0 85.96 85.96 0 192 0C298 0 384 85.96 384 192C384 279.4 267.9 435 215.7 499.2C203.4 514.5 180.6 514.5 168.3 499.2H168.3zM192 256C227.3 256 256 227.3 256 192C256 156.7 227.3 128 192 128C156.7 128 128 156.7 128 192C128 227.3 156.7 256 192 256z"/></svg>',
+                iconSize: [30, 42], iconAnchor: [15, 42]
+            });
+            marker = L.marker([38.4237, 27.1428], {icon: customIcon}).addTo(diveMap);
+        }
+
+        function simulateGPS() {
+            let lat = 38.35 + (Math.random() * 0.05);
+            let lon = 26.75 + (Math.random() * 0.05);
+            updateMapLocation(lat, lon);
+            showMsg('SİMÜLASYON', 'Uydu verisi simüle edildi.');
+        }
+
+        function updateMapLocation(lat, lon) {
+            if(diveMap && marker) {
+                const newLatLng = new L.LatLng(lat, lon);
+                marker.setLatLng(newLatLng);
+                diveMap.panTo(newLatLng);
+                document.getElementById('gps-lat').innerText = "LAT: " + lat.toFixed(5);
+                document.getElementById('gps-lon').innerText = "LON: " + lon.toFixed(5);
+            }
+        }
+
+        // --- GRAFİK YÖNETİMİ ---
+        let depthChart;
+        let depthDataPoints = Array(20).fill(0); 
+        
+        function initChart() {
+            const ctx = document.getElementById('depthChart').getContext('2d');
+            depthChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Array(20).fill(''),
+                    datasets: [{
+                        label: 'Derinlik (m)',
+                        data: depthDataPoints,
+                        borderColor: '#0ea5e9',
+                        backgroundColor: 'rgba(14, 165, 233, 0.2)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { display: false },
+                        y: { display: true, reverse: true, grid: { color: '#1e293b' }, ticks: { color: '#64748b', font: {size: 9} } }
+                    },
+                    animation: { duration: 300 }
+                }
+            });
+        }
+        window.addEventListener('DOMContentLoaded', initChart);
+
+        function updateDepthChart(newDepth) {
+            depthDataPoints.push(newDepth);
+            depthDataPoints.shift();
+            if(depthChart) {
+                depthChart.options.scales.y.suggestedMax = Math.max(...depthDataPoints) + 5;
+                depthChart.update();
+            }
+        }
+
+        // --- SEKME / MENÜ GEÇİŞLERİ ---
+        function switchTab(t) { 
+            const tabs = ['dashboard', 'controls', 'map', 'planner', 'logs'];
+            tabs.forEach(tab => { 
+                document.getElementById('view-'+tab).classList.add('hidden'); 
+                document.getElementById('tab-'+tab).classList.remove('active', 'text-white'); 
+                document.getElementById('tab-'+tab).classList.add('text-slate-500');
+            }); 
+            
+            document.getElementById('view-'+t).classList.remove('hidden'); 
+            document.getElementById('tab-'+t).classList.add('active', 'text-white');
+            document.getElementById('tab-'+t).classList.remove('text-slate-500');
+
+            if(t === 'map') {
+                initMap();
+                setTimeout(() => { diveMap.invalidateSize(); }, 100);
+            }
+        }
+
+        function showMsg(title, text) {
+            const box = document.getElementById('msg-box');
+            document.getElementById('msg-title').innerText = title; 
+            document.getElementById('msg-text').innerText = text;
+            box.style.opacity = "1"; box.style.transform = "translate(-50%, 0)";
+            setTimeout(() => { box.style.opacity = "0"; box.style.transform = "translate(-50%, -20px)"; }, 3000);
+        }
+
+        // --- BLUETOOTH VE DONANIM ---
+        document.getElementById('btnConnect').onclick = async () => {
+            if(bleDevice) { bleDevice.gatt.disconnect(); return; }
+            try {
+                showMsg('ARANIYOR', 'Sistem aranıyor...');
+                bleDevice = await navigator.bluetooth.requestDevice({ 
+                    filters: [{ namePrefix: 'AkuaDive' }, { namePrefix: 'SharkDive' }], 
+                    optionalServices: [SERVICE_UUID] 
+                });
+                
+                bleDevice.addEventListener('gattserverdisconnected', () => { 
+                    showMsg('KOPTU', 'Çevrimdışı.'); 
+                    bleDevice = null; 
+                    rxChar = null; 
+                    document.getElementById('btnConnect').className = "bg-slate-800 text-white px-5 py-2.5 rounded-full font-black text-[10px] border border-slate-700"; 
+                    document.getElementById('connectText').innerText = "BAĞLAN"; 
+                });
+                
+                const server = await bleDevice.gatt.connect();
+                const service = await server.getPrimaryService(SERVICE_UUID);
+                rxChar = await service.getCharacteristic(CHARACTERISTIC_RX_UUID);
+                const txChar = await service.getCharacteristic(CHARACTERISTIC_TX_UUID);
+                await txChar.startNotifications();
+                txChar.addEventListener('characteristicvaluechanged', handleData);
+                
+                document.getElementById('btnConnect').className = "bg-sky-600 text-white px-5 py-2.5 rounded-full font-black text-[10px] border border-sky-400 shadow-lg"; 
+                document.getElementById('connectText').innerText = "AYRIL";
+            } catch (err) { 
+                console.log(err);
+            }
+        };
+
+        async function sendCmd(cmd) {
+            if(!rxChar) { showMsg('HATA', 'Sisteme bağlı değilsiniz.'); return; }
+            try { 
+                await rxChar.writeValue(new TextEncoder().encode(cmd)); 
+                showMsg('BAŞARILI', cmd + ' gönderildi.'); 
+            } catch (e) {}
+        }
+
+        function toggleHardware(type) {
+            hardwareState[type] = !hardwareState[type];
+            const cmd = type === 'light' ? (hardwareState.light ? 'light.on' : 'light.off') : (hardwareState.camera ? 'cam.on' : 'cam.off');
+            sendCmd(cmd);
+            
+            const btn = document.getElementById(type === 'light' ? 'btnLight' : 'btnCamera');
+            const status = document.getElementById(type === 'light' ? 'statusLight' : 'statusCamera');
+            
+            if(hardwareState[type]) {
+                btn.classList.add('toggle-active'); 
+                status.innerText = "AKTİF"; 
+                status.classList.replace('text-slate-500', 'text-white');
+            } else {
+                btn.classList.remove('toggle-active'); 
+                status.innerText = type === 'light' ? "Kapalı" : "Beklemede"; 
+                status.classList.replace('text-white', 'text-slate-500');
+            }
+        }
+
+        function setLimit(type) {
+            const input = document.getElementById(type === 'low' ? 'inputLow' : 'inputHigh');
+            const val = parseFloat(input.value);
+            if(!isNaN(val)) sendCmd(`set.${type}:${val.toFixed(1)}`);
+            input.value = '';
+        }
+
+        document.getElementById('toggleService').onclick = () => {
+            document.getElementById('service-area').classList.toggle('hidden');
+        };
+
+        // --- GELEN VERİLERİ OKUMA ---
+        function handleData(event) {
+            const val = new TextDecoder().decode(event.target.value);
+            const getVal = (reg) => { const m = val.match(reg); return m ? m[1] : null; };
+
+            if(val.includes("MOD:ACIK")) {
+                if(!runtimeInt) runtimeInt = setInterval(() => { runtimeSec++; renderRT(); }, 1000);
+            } else if(val.includes("MOD:KAPALI")) {
+                clearInterval(runtimeInt); runtimeInt = null;
+            }
+
+            // GPS Data
+            const gpsParts = val.match(/GPS:([0-9.-]+),([0-9.-]+)/);
+            if(gpsParts) {
+                updateMapLocation(parseFloat(gpsParts[1]), parseFloat(gpsParts[2]));
+            }
+
+            // Derinlik ve Grafik
+            const depth = getVal(/EXT_P:([0-9.]+)M/); 
+            if(depth) {
+                document.getElementById('valDerinlik').innerText = depth;
+                updateDepthChart(parseFloat(depth));
+            }
+
+            // CO Sensör Analizi
+            const coPpm = getVal(/CO_PPM:([0-9]+)/);
+            if(coPpm) {
+                const ppm = parseInt(coPpm);
+                document.getElementById('valCoText').innerText = ppm;
+                
+                const barFill = document.getElementById('coBarFill');
+                const coStatus = document.getElementById('valCoStatus');
+                const cardCo = document.getElementById('card-co');
+                
+                let fillHeight = Math.min(100, (ppm / 100) * 100);
+                barFill.style.height = fillHeight + "%";
+
+                if(ppm > 50) { 
+                    barFill.className = "vertical-bar-fill bg-red-500";
+                    document.getElementById('valCoText').className = "text-lg font-black text-red-500 leading-none";
+                    coStatus.innerText = "TEHLİKE"; 
+                    coStatus.className = "text-[8px] font-bold text-red-500 uppercase tracking-widest mt-1";
+                    cardCo.classList.add('alarm-active');
+                } else if (ppm > 20) { 
+                    barFill.className = "vertical-bar-fill bg-orange-400";
+                    document.getElementById('valCoText').className = "text-lg font-black text-orange-400 leading-none";
+                    coStatus.innerText = "DİKKAT"; 
+                    coStatus.className = "text-[8px] font-bold text-orange-400 uppercase tracking-widest mt-1";
+                    cardCo.classList.remove('alarm-active');
+                } else { 
+                    barFill.className = "vertical-bar-fill bg-emerald-500";
+                    document.getElementById('valCoText').className = "text-lg font-black text-emerald-400 leading-none";
+                    coStatus.innerText = "NORMAL"; 
+                    coStatus.className = "text-[8px] font-bold text-emerald-600 uppercase tracking-widest mt-1";
+                    cardCo.classList.remove('alarm-active');
+                }
+            }
+
+            // Batarya ve Diğer Sensörler
+            const volt = getVal(/GUC:([0-9.]+)V/);
+            if(volt) {
+                const pct = Math.max(0, Math.min(100, ((parseFloat(volt) - 9.6) / 3) * 100));
+                document.getElementById('valGucYuzde').innerText = Math.round(pct) + "%";
+                document.getElementById('valGucSure').innerText = `Kalan: ${Math.floor(pct * 1.8 / 60)} sa ${Math.floor(pct * 1.8 % 60)} dk`;
+            }
+            
+            const bsn = getVal(/BSN:([0-9.]+)B/); if(bsn) document.getElementById('valBsn').innerText = bsn;
+            const lmtMatch = val.match(/LMT:([0-9.]+)-([0-9.]+)B/); if(lmtMatch) document.getElementById('valLmt').innerText = `Bar (Lmt: ${lmtMatch[1]}/${lmtMatch[2]})`;
+            const wTemp = getVal(/W_TEMP:([0-9.]+)C/); if(wTemp) document.getElementById('valSuIsi').innerText = wTemp;
+            const pulse = getVal(/HR:([0-9.]+)B/); if(pulse) document.getElementById('valNabiz').innerText = pulse;
+            const o2 = getVal(/O2:([0-9.]+)P/); if(o2) document.getElementById('valOksijen').innerText = o2;
+            const egm = getVal(/EGM:([^\n]+)/); if(egm) document.getElementById('valEgm').innerText = egm;
+
+            // Alarm Kontrolü
+            const alarm = getVal(/ALRM:([^\n]+)/);
+            if(alarm) {
+                const cards = { 'bsn': document.getElementById('card-basinc'), 'mpu': document.getElementById('card-mpu'), 'pulse': document.getElementById('card-pulse') };
+                if(alarm !== "YOK") {
+                    if(alarm !== lastAlarm && navigator.vibrate) navigator.vibrate([300, 100, 300]);
+                    if(alarm.includes("DEVRILME")) cards.mpu.classList.add('alarm-active');
+                    if(alarm.includes("NABIZ")) cards.pulse.classList.add('alarm-active');
+                    if(alarm !== lastAlarm) addLog(alarm);
+                } else { 
+                    Object.values(cards).forEach(c => c.classList.remove('alarm-active')); 
+                }
+                lastAlarm = alarm;
+            }
+        }
+
+        // --- YAPAY ZEKA ---
+        async function callGeminiAPI(prompt, system, isTTS = false) {
+            const endpoint = isTTS ? 'gemini-2.5-flash-preview-tts' : GEMINI_MODEL;
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${endpoint}:${isTTS ? 'generateContent' : 'generateContent'}?key=${apiKey}`;
+            const payload = { contents: [{ parts: [{ text: prompt }] }], systemInstruction: { parts: [{ text: system }] } };
+            
+            if (isTTS) {
+                payload.generationConfig = { 
+                    responseModalities: ["AUDIO"], 
+                    speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Puck" } } } 
+                };
+            }
+            
+            for (let i = 0; i < 3; i++) { 
+                try { 
+                    const r = await fetch(url, { method: 'POST', body: JSON.stringify(payload) }); 
+                    return await r.json(); 
+                } catch (e) { 
+                    await new Promise(r => setTimeout(r, 1000)); 
+                } 
+            }
+            return null;
+        }
+
+        async function speakAIResponse() {
+            if (!currentAIResponseText) return;
+            const btn = document.getElementById('ai-tts-btn');
+            btn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i>...';
+            
+            const res = await callGeminiAPI(`Say clearly: ${currentAIResponseText}`, "Sen Akua Dive sisteminin sesli asistanısın.", true);
+            
+            if (res && res.candidates && res.candidates[0].content.parts[0].inlineData) {
+                const b64 = res.candidates[0].content.parts[0].inlineData.data;
+                const sr = parseInt(res.candidates[0].content.parts[0].inlineData.mimeType.match(/rate=(\d+)/)?.[1] || "24000");
+                const pcm = new Int16Array(Uint8Array.from(atob(b64), c => c.charCodeAt(0)).buffer);
+                
+                const buf = new ArrayBuffer(44 + pcm.length * 2);
+                const view = new DataView(buf);
+                const ws = (o, s) => { for(let i=0; i<s.length; i++) view.setUint8(o+i, s.charCodeAt(i)); };
+                
+                ws(0,'RIFF'); view.setUint32(4, 36+pcm.length*2, true); ws(8,'WAVE'); ws(12,'fmt '); 
+                view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true); 
+                view.setUint32(24, sr, true); view.setUint32(28, sr*2, true); view.setUint16(32, 2, true); 
+                view.setUint16(34, 16, true); ws(36,'data'); view.setUint32(40, pcm.length*2, true);
+                for(let i=0; i<pcm.length; i++) view.setInt16(44+i*2, pcm[i], true);
+                
+                const audio = new Audio(URL.createObjectURL(new Blob([buf], { type: 'audio/wav' })));
+                audio.play();
+            }
+            btn.innerHTML = '<i class="fa-solid fa-volume-high"></i> ✨ Seslendir';
+        }
+
+        function openAIModal(title) { 
+            document.getElementById('ai-modal-title').innerText = title; 
+            document.getElementById('ai-modal').classList.remove('hidden'); 
+            document.getElementById('ai-content').innerHTML = '<div class="space-y-4" id="ai-loading"><div class="h-4 shimmer rounded-full w-3/4"></div><div class="h-4 shimmer rounded-full w-full"></div></div>'; 
+            document.getElementById('ai-tts-btn').classList.add('hidden'); 
+            currentAIResponseText = "";
+        }
+        
+        function closeAIModal() { 
+            document.getElementById('ai-modal').classList.add('hidden'); 
+        }
+        
+        function updateAIContent(t) { 
+            document.getElementById('ai-content').innerHTML = t.replace(/\n/g, '<br>'); 
+            document.getElementById('ai-tts-btn').classList.remove('hidden'); 
+        }
+
+        async function runAI(title, prompt, sysStr) {
+            openAIModal(title);
+            const res = await callGeminiAPI(prompt, sysStr);
+            currentAIResponseText = res?.candidates?.[0]?.content?.parts?.[0]?.text || "Bağlantı hatası.";
+            updateAIContent(currentAIResponseText);
+        }
+
+        const getSysData = () => `Batarya:${document.getElementById('valGucYuzde').innerText}, Kutu Basıncı:${document.getElementById('valBsn').innerText}, CO:${document.getElementById('valCoText').innerText}ppm, Nabız:${document.getElementById('valNabiz').innerText}`;
+        
+        function analyzeSystemWithAI() { runAI("DURUM ANALİZİ", `Sistem: ${getSysData()}`, "Akua Dive asistanısın. Türkçe, kısa teknik yanıt ver."); }
+        function generateEmergencyProtocol() { runAI("🚨 ACİL DURUM", `ACİL DURUM! Sensörler: ${getSysData()}. Tahliye talimatları ver.`, "Kriz yöneticisisin. Madde madde, hayati talimatlar ver. Türkçe."); }
+        function generatePreDiveChecklist() { runAI("DALIŞ ÖNCESİ", `Sistem: ${getSysData()}. Checklist oluştur.`, "Dalış güvenliği uzmanısın. Madde madde kısa liste yap. Türkçe."); }
+        function planOperationWithAI() { runAI("PLANLAYICI", `Veriler: ${getSysData()}`, "Operasyon planlayıcısısın. Güvenli çalışma limitlerini belirt. Türkçe."); }
+        function simulateScenarioWithAI() { const val = document.getElementById('ai-scenario-input').value; if(val) runAI("SİMÜLATÖR", `Durum: ${getSysData()}. Senaryo: ${val}`, "Simülasyon eğitmenisin. Tepkiyi ve yapılması gerekeni açıkla. Türkçe."); }
+        function troubleshootWithAI() { const val = document.getElementById('ai-problem-input').value; if(val) runAI("TEKNİK DANIŞMAN", `Problem: ${val}`, "Teknisyensin. Kısa çözüm sun. Türkçe."); }
+        function analyzeLogsWithAI() { if(errorLogs.length>0) runAI("GEÇMİŞ ANALİZİ", `Loglar: ${errorLogs.map(l=>l.msg).join(',')}`, "Bakım uzmanısın. Arıza eğilimi bul. Türkçe."); }
+        function generateEndOfDayReport() { runAI("GÜN SONU RAPORU", `Süre: ${Math.floor(runtimeSec/3600)}sa ${Math.floor((runtimeSec%3600)/60)}dk. Hatalar: ${errorLogs.map(l=>l.msg).join(', ')}`, "Dalış operasyonu gün sonu özet raporu yaz. Türkçe."); }
+
+        function renderRT() { document.getElementById('totalRuntimeDisplay').innerText = `${Math.floor(runtimeSec/3600)}s ${Math.floor((runtimeSec%3600)/60)}d ${runtimeSec%60}s`; }
+        function addLog(msg) { 
+            const n = new Date(); 
+            errorLogs.unshift({ msg, time: n.toLocaleTimeString('tr-TR') }); 
+            if(errorLogs.length > 30) errorLogs.pop(); 
+            localStorage.setItem('akuadive_logs', JSON.stringify(errorLogs)); 
+            renderLogs(); 
+        }
+        function renderLogs() {
+            const c = document.getElementById('logsContainer');
+            if(errorLogs.length === 0) { c.innerHTML = '<p class="text-center text-[10px] py-8 text-slate-600 italic">Kayıt yok.</p>'; return; }
+            c.innerHTML = ''; 
+            errorLogs.forEach(l => { 
+                const el = document.createElement('div'); 
+                el.className = "p-3 rounded-xl bg-slate-800 border-l-4 border-red-500 text-[10px] font-black flex justify-between"; 
+                el.innerHTML = `<span class="text-red-400 uppercase">${l.msg}</span><span class="text-slate-600">${l.time}</span>`; 
+                c.appendChild(el); 
+            });
+        }
+        function resetRuntime() { runtimeSec = 0; localStorage.setItem('akuadive_runtime', '0'); renderRT(); }
+        
+        renderRT(); 
+        renderLogs();
+    </script>
+</body>
+</html>
