@@ -6,7 +6,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#020617">
-    <title>Akua Dive S3 Tactical OS</title>
+    <title>Akua Dive S3 Modular OS</title>
     
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M15 85C25 65 35 40 50 15C65 40 75 65 85 85H68C65 75 62 68 58 62C55 58 52 56 48 58C44 60 41 68 38 85H15Z' fill='%233b82f6'/></svg>">
     
@@ -23,12 +23,9 @@
         body { background-color: #020617; color: #f8fafc; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; user-select: none; }
         h1, .tactical-font { font-family: 'Orbitron', sans-serif; }
         
-        .card { background-color: #0f172a; border-radius: 1.25rem; border: 1px solid #1e293b; transition: all 0.2s ease; overflow: hidden; }
+        .card { background-color: #0f172a; border-radius: 1.25rem; border: 1px solid #1e293b; transition: all 0.3s ease; overflow: hidden; }
         
-        @keyframes alert-pulse { 
-            0%, 100% { background-color: #0f172a; border-color: #1e293b; } 
-            50% { background-color: #450a0a; border-color: #ef4444; box-shadow: 0 0 20px rgba(239, 68, 68, 0.2); } 
-        }
+        @keyframes alert-pulse { 0%, 100% { background-color: #0f172a; border-color: #1e293b; } 50% { background-color: #450a0a; border-color: #ef4444; box-shadow: 0 0 20px rgba(239, 68, 68, 0.2); } }
         .alarm-active { animation: alert-pulse 0.7s infinite !important; }
 
         .glass-header { background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(20px); border-bottom: 1px solid #1e293b; }
@@ -43,9 +40,15 @@
 
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-        
         .shimmer { background: linear-gradient(90deg, #0f172a 25%, #1e293b 50%, #0f172a 75%); background-size: 200% 100%; animation: shimmer-anim 1.5s infinite; }
         @keyframes shimmer-anim { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+        /* Fab Button CSS */
+        .fab-btn { position: fixed; bottom: 24px; right: 24px; width: 56px; height: 56px; background-color: #0ea5e9; border-radius: 50%; box-shadow: 0 4px 20px rgba(14, 165, 233, 0.5); display: flex; align-items: center; justify-content: center; font-size: 24px; color: white; z-index: 90; transition: transform 0.2s; }
+        .fab-btn:active { transform: scale(0.9); }
+        
+        /* Smooth Toggle */
+        .module-checkbox { accent-color: #0ea5e9; width: 18px; height: 18px; }
     </style>
 </head>
 <body class="h-screen flex flex-col overflow-hidden">
@@ -65,7 +68,7 @@
             </div>
             <div>
                 <h1 class="text-lg font-black tracking-tighter leading-none text-white">AKUA DIVE</h1>
-                <p class="text-[9px] text-sky-400 font-bold tracking-[0.3em] uppercase mt-1">S3 Tactical OS</p>
+                <p class="text-[9px] text-sky-400 font-bold tracking-[0.3em] uppercase mt-1">MODULAR OS v6</p>
             </div>
         </div>
         <button id="btnConnect" class="bg-slate-800 text-white px-5 py-2.5 rounded-full font-black text-[10px] border border-slate-700 flex items-center gap-2 active:scale-95 transition-all">
@@ -78,6 +81,46 @@
         <div>
             <h4 id="msg-title" class="font-black text-[10px] uppercase tracking-widest">Sistem Bilgisi</h4>
             <p id="msg-text" class="text-[10px] text-slate-400">Veri akışı bekleniyor...</p>
+        </div>
+    </div>
+
+    <!-- MODULE MANAGER MODAL -->
+    <div id="module-modal" class="fixed inset-0 bg-black/95 z-[120] flex items-center justify-center p-5 hidden backdrop-blur-2xl">
+        <div class="bg-slate-900 w-full max-w-lg rounded-[2.5rem] border border-sky-500/20 overflow-hidden shadow-2xl flex flex-col">
+            <div class="p-6 border-b border-white/5 flex justify-between items-center bg-sky-500/5">
+                <div class="flex items-center gap-3">
+                    <i class="fa-solid fa-layer-group text-sky-400 text-xl"></i>
+                    <h3 class="font-black text-[11px] tracking-[0.2em] text-sky-400 uppercase">Donanım Modülleri</h3>
+                </div>
+                <button onclick="closeModuleModal()" class="text-slate-500 hover:text-white"><i class="fa-solid fa-circle-xmark text-3xl"></i></button>
+            </div>
+            <div class="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+                <p class="text-[10px] text-slate-400 mb-4">Sisteme fiziksel olarak bağladığınız sensörleri aktif edin. Arayüz otomatik şekillenecektir.</p>
+                
+                <label class="flex items-center gap-4 p-4 bg-slate-800/50 rounded-xl border border-white/5 cursor-pointer">
+                    <input type="checkbox" id="mod-depth" class="module-checkbox" onchange="updateModules()">
+                    <div><span class="block text-xs font-black text-white">Derinlik & Dış Basınç Profili</span><span class="text-[9px] text-slate-500">Derinlik grafiği ve su sıcaklığı ölçer.</span></div>
+                </label>
+                <label class="flex items-center gap-4 p-4 bg-slate-800/50 rounded-xl border border-white/5 cursor-pointer">
+                    <input type="checkbox" id="mod-co" class="module-checkbox" onchange="updateModules()">
+                    <div><span class="block text-xs font-black text-white">Karbonmonoksit (CO) Analizörü</span><span class="text-[9px] text-slate-500">Zehirli gaz uyarısı ve dikey ppm barı.</span></div>
+                </label>
+                <label class="flex items-center gap-4 p-4 bg-slate-800/50 rounded-xl border border-white/5 cursor-pointer">
+                    <input type="checkbox" id="mod-bio" class="module-checkbox" onchange="updateModules()">
+                    <div><span class="block text-xs font-black text-white">Dalgıç Biyometrik (Nabız & O2)</span><span class="text-[9px] text-slate-500">Giyilebilir donanım vital bulgu takibi.</span></div>
+                </label>
+                <label class="flex items-center gap-4 p-4 bg-slate-800/50 rounded-xl border border-white/5 cursor-pointer">
+                    <input type="checkbox" id="mod-hw" class="module-checkbox" onchange="updateModules()">
+                    <div><span class="block text-xs font-black text-white">Harici Aksesuar (Kamera & Işık)</span><span class="text-[9px] text-slate-500">Röle kontrollü aydınlatma ve kayıt.</span></div>
+                </label>
+                <label class="flex items-center gap-4 p-4 bg-slate-800/50 rounded-xl border border-white/5 cursor-pointer">
+                    <input type="checkbox" id="mod-gps" class="module-checkbox" onchange="updateModules()">
+                    <div><span class="block text-xs font-black text-white">Uydu Konum (GPS) Modülü</span><span class="text-[9px] text-slate-500">Canlı takip için Harita sekmesini açar.</span></div>
+                </label>
+            </div>
+            <div class="p-4 bg-black/40 border-t border-white/5">
+                <button onclick="closeModuleModal()" class="w-full bg-sky-600 text-white font-black text-[11px] tracking-widest py-3 rounded-xl">TAMAMLA</button>
+            </div>
         </div>
     </div>
 
@@ -95,7 +138,6 @@
                 <div class="space-y-4" id="ai-loading">
                     <div class="h-4 shimmer rounded-full w-3/4"></div>
                     <div class="h-4 shimmer rounded-full w-full"></div>
-                    <div class="h-4 shimmer rounded-full w-5/6"></div>
                 </div>
             </div>
             <div class="p-4 bg-black/40 border-t border-white/5 flex justify-between items-center">
@@ -106,19 +148,24 @@
         </div>
     </div>
 
+    <!-- Modül Ekleme (FAB) Butonu -->
+    <button onclick="openModuleModal()" class="fab-btn"><i class="fa-solid fa-plus"></i></button>
+
     <main class="flex-1 overflow-y-auto p-4 pb-32">
         <!-- MENÜ -->
         <div class="flex gap-4 border-b border-white/5 mb-5 overflow-x-auto pb-2 scrollbar-hide whitespace-nowrap">
             <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-btn active pb-2 text-[10px] font-black uppercase tracking-[0.1em] transition-all">OPERASYON</button>
             <button onclick="switchTab('controls')" id="tab-controls" class="tab-btn pb-2 text-[10px] font-black uppercase tracking-[0.1em] transition-all text-slate-500">KONTROL</button>
-            <button onclick="switchTab('map')" id="tab-map" class="tab-btn pb-2 text-[10px] font-black uppercase tracking-[0.1em] transition-all text-slate-500">HARİTA/KONUM</button>
+            <button onclick="switchTab('map')" id="tab-map" class="tab-btn hidden pb-2 text-[10px] font-black uppercase tracking-[0.1em] transition-all text-slate-500">HARİTA/KONUM</button>
             <button onclick="switchTab('planner')" id="tab-planner" class="tab-btn pb-2 text-[10px] font-black uppercase tracking-[0.1em] transition-all text-slate-500">PLANLAYICI</button>
             <button onclick="switchTab('logs')" id="tab-logs" class="tab-btn pb-2 text-[10px] font-black uppercase tracking-[0.1em] transition-all text-slate-500">KAYITLAR</button>
         </div>
 
         <!-- 1. OPERASYON SEKMESİ -->
         <div id="view-dashboard" class="space-y-4">
-            <div class="grid grid-cols-2 gap-3">
+            
+            <!-- (OPSİYONEL) DERİNLİK VE SU SICAKLIĞI -->
+            <div id="wrapper-depth" class="hidden grid grid-cols-2 gap-3">
                 <div id="card-depth" class="card p-5 flex flex-col items-center justify-center bg-blue-900/10 border-blue-500/30">
                     <span class="text-[10px] text-blue-400 font-black mb-1 tracking-widest uppercase">DERİNLİK</span>
                     <div class="flex items-baseline gap-1">
@@ -135,13 +182,15 @@
                 </div>
             </div>
 
-            <div class="card p-3 bg-slate-900/40">
+            <!-- (OPSİYONEL) DERİNLİK GRAFİĞİ -->
+            <div id="wrapper-chart" class="hidden card p-3 bg-slate-900/40">
                 <div class="flex justify-between items-center mb-1 px-1">
                     <span class="text-[9px] font-black text-slate-500 tracking-widest uppercase"><i class="fa-solid fa-chart-area text-blue-500"></i> Derinlik Profili</span>
                 </div>
                 <div class="h-24 w-full"><canvas id="depthChart"></canvas></div>
             </div>
 
+            <!-- (SABİT - CORE) GÜÇ VE HAVA BASINCI -->
             <div class="grid grid-cols-2 gap-3">
                 <div id="card-voltaj" class="card p-5 flex flex-col items-center justify-center">
                     <span class="text-[10px] text-slate-500 font-black mb-1 tracking-widest uppercase">BATARYA</span>
@@ -155,7 +204,33 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-3">
+            <!-- (SABİT - CORE) KUTU İÇİ ORJİNAL SENSÖRLER (DHT/NTC/SIVI) -->
+            <div id="card-komp" class="card p-4">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-[10px] font-black text-slate-500 tracking-widest uppercase"><i class="fa-solid fa-box text-sky-500"></i> İÇ SENSÖRLER</h3>
+                </div>
+                <div class="grid grid-cols-4 gap-2 text-center">
+                    <div class="bg-slate-900/50 p-2 rounded-lg border border-white/5">
+                        <span class="block text-[8px] text-slate-500 font-bold uppercase mb-1">İÇ ISI</span>
+                        <span id="valKmpIsi" class="text-sm font-black text-orange-400">--</span>
+                    </div>
+                    <div class="bg-slate-900/50 p-2 rounded-lg border border-white/5">
+                        <span class="block text-[8px] text-slate-500 font-bold uppercase mb-1">İÇ NEM</span>
+                        <span id="valKmpNem" class="text-sm font-black text-sky-300">--</span>
+                    </div>
+                    <div class="bg-slate-900/50 p-2 rounded-lg border border-white/5">
+                        <span class="block text-[8px] text-slate-500 font-bold uppercase mb-1">NTC (Kompresör)</span>
+                        <span id="valKmpNtc" class="text-sm font-black text-orange-500">--</span>
+                    </div>
+                    <div class="bg-slate-900/50 p-2 rounded-lg border border-white/5">
+                        <span class="block text-[8px] text-slate-500 font-bold uppercase mb-1">SIVI KAÇAĞI</span>
+                        <span id="valKmpSu" class="text-xs font-black text-emerald-400">YOK</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- (OPSİYONEL) DALGIÇ BİYOMETRİSİ -->
+            <div id="wrapper-bio" class="hidden grid grid-cols-2 gap-3">
                 <div id="card-pulse" class="card p-5 flex flex-col items-center justify-center bg-rose-950/10 border-rose-500/20">
                     <span class="text-[10px] text-rose-500 font-black mb-1 tracking-widest uppercase"><i class="fa-solid fa-heart-pulse"></i> DALGIÇ NABIZ</span>
                     <div class="flex items-baseline gap-1">
@@ -172,12 +247,15 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-3">
-                <div id="card-mpu" class="card p-4 flex flex-col items-center justify-center bg-purple-900/10 border-purple-500/20 text-center">
-                    <span class="text-[9px] font-black text-slate-500 tracking-widest uppercase mb-2">DENGE DURUMU</span>
+            <!-- GÜVENLİK (MPU: SABİT, CO: OPSİYONEL) -->
+            <div class="grid grid-cols-2 gap-3" id="wrapper-safety">
+                <!-- MPU Denge Sensörü -->
+                <div id="card-mpu" class="card p-4 flex flex-col items-center justify-center bg-purple-900/10 border-purple-500/20 text-center col-span-2">
+                    <span class="text-[9px] font-black text-slate-500 tracking-widest uppercase mb-2">KUTU DENGE DURUMU</span>
                     <span id="valEgm" class="text-xs font-black text-purple-400">--</span>
                 </div>
-                <div id="card-co" class="card p-4 flex justify-between items-center bg-orange-900/10 border-orange-500/20">
+                <!-- CO Dikey Bar (Opsiyonel) -->
+                <div id="card-co" class="hidden card p-4 flex justify-between items-center bg-orange-900/10 border-orange-500/20">
                     <div class="flex flex-col gap-1">
                         <span class="text-[9px] font-black text-slate-500 tracking-widest uppercase">CO (PPM)</span>
                         <span id="valCoText" class="text-lg font-black text-emerald-400 leading-none">0</span>
@@ -187,39 +265,44 @@
                 </div>
             </div>
 
-            <div class="pt-2 space-y-3">
+            <!-- AI BUTONU -->
+            <div class="pt-2">
                 <button onclick="analyzeSystemWithAI()" class="ai-btn w-full text-white p-4 rounded-xl font-black text-[11px] tracking-widest shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-transform">
-                    <i class="fa-solid fa-stethoscope text-lg"></i> ✨ YAPAY ZEKA DURUM ANALİZİ
+                    <i class="fa-solid fa-stethoscope text-lg"></i> ✨ SİSTEM DURUM ANALİZİ
                 </button>
             </div>
         </div>
 
         <!-- 2. KONTROLLER SEKMESİ -->
         <div id="view-controls" class="hidden space-y-4">
-            <h3 class="text-xs font-black text-slate-500 uppercase tracking-widest ml-1 mb-2">Donanım Kontrolleri</h3>
             
-            <div class="grid grid-cols-2 gap-4">
-                <button id="btnLight" onclick="toggleHardware('light')" class="card p-6 flex flex-col items-center gap-3 bg-slate-900 border-slate-800 transition-all">
-                    <i class="fa-solid fa-lightbulb text-2xl"></i>
-                    <div class="text-center">
-                        <span class="block text-[11px] font-black uppercase tracking-widest">Sualtı Aydınlatma</span>
-                        <span id="statusLight" class="text-[9px] font-bold text-slate-500 uppercase">Kapalı</span>
-                    </div>
-                </button>
-                <button id="btnCamera" onclick="toggleHardware('camera')" class="card p-6 flex flex-col items-center gap-3 bg-slate-900 border-slate-800 transition-all">
-                    <i class="fa-solid fa-video text-2xl"></i>
-                    <div class="text-center">
-                        <span class="block text-[11px] font-black uppercase tracking-widest">Kamera Kaydı</span>
-                        <span id="statusCamera" class="text-[9px] font-bold text-slate-500 uppercase">Beklemede</span>
-                    </div>
-                </button>
+            <!-- (OPSİYONEL) IŞIK VE KAMERA -->
+            <div id="wrapper-hw-controls" class="hidden">
+                <h3 class="text-xs font-black text-slate-500 uppercase tracking-widest ml-1 mb-2">Aksesuar Kontrolleri</h3>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <button id="btnLight" onclick="toggleHardware('light')" class="card p-6 flex flex-col items-center gap-3 bg-slate-900 border-slate-800 transition-all">
+                        <i class="fa-solid fa-lightbulb text-2xl"></i>
+                        <div class="text-center">
+                            <span class="block text-[11px] font-black uppercase tracking-widest">Sualtı Aydınlatma</span>
+                            <span id="statusLight" class="text-[9px] font-bold text-slate-500 uppercase">Kapalı</span>
+                        </div>
+                    </button>
+                    <button id="btnCamera" onclick="toggleHardware('camera')" class="card p-6 flex flex-col items-center gap-3 bg-slate-900 border-slate-800 transition-all">
+                        <i class="fa-solid fa-video text-2xl"></i>
+                        <div class="text-center">
+                            <span class="block text-[11px] font-black uppercase tracking-widest">Kamera Kaydı</span>
+                            <span id="statusCamera" class="text-[9px] font-bold text-slate-500 uppercase">Beklemede</span>
+                        </div>
+                    </button>
+                </div>
             </div>
 
+            <!-- SABİT KONTROLLER -->
             <div class="card p-5 space-y-4">
                 <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-white/5 pb-2">Donanım Testleri</h4>
                 <div class="grid grid-cols-2 gap-3">
                     <button onclick="sendCmd('b.test')" class="bg-slate-800 border border-slate-700 p-4 rounded-xl flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-widest active:bg-slate-700">
-                        <i class="fa-solid fa-volume-high text-sky-400"></i> SES TESTİ
+                        <i class="fa-solid fa-volume-high text-sky-400"></i> SES
                     </button>
                     <button onclick="sendCmd('t.test')" class="bg-slate-800 border border-slate-700 p-4 rounded-xl flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-widest active:bg-slate-700">
                         <i class="fa-solid fa-vibration text-purple-400"></i> TİTREŞİM
@@ -228,7 +311,7 @@
             </div>
 
             <button onclick="generateEmergencyProtocol()" class="w-full bg-red-900/30 border border-red-500/50 text-red-400 p-4 rounded-xl font-black text-[11px] tracking-widest shadow-lg flex items-center justify-center gap-3 active:bg-red-800/50 animate-pulse">
-                <i class="fa-solid fa-triangle-exclamation"></i> 🚨 ACİL DURUM PROTOKOLÜ
+                <i class="fa-solid fa-triangle-exclamation"></i> 🚨 ACİL DURUM PROTOKOLÜ YARAT
             </button>
             
             <div class="card p-5 border-sky-500/20 bg-sky-950/10">
@@ -255,7 +338,7 @@
             </div>
         </div>
 
-        <!-- 3. HARİTA SEKMESİ -->
+        <!-- 3. HARİTA SEKMESİ (OPSİYONEL - GPS EKLENİNCE AÇILIR) -->
         <div id="view-map" class="hidden space-y-4">
             <div class="card p-3 bg-slate-900 border-slate-700 h-[60vh] relative">
                 <div id="map" class="w-full h-full rounded-lg z-10"></div>
@@ -292,7 +375,7 @@
             <div class="card p-5 bg-slate-900/40 border-sky-500/20 mt-4">
                 <h3 class="text-[10px] font-black text-sky-500 uppercase tracking-widest mb-3"><i class="fa-solid fa-wrench"></i> Teknik Danışman</h3>
                 <div class="flex gap-2">
-                    <input type="text" id="ai-problem-input" placeholder="✨ Arıza Sor: Örn: Işıklar yanmıyor" class="bg-black/40 border border-white/5 text-white p-3 rounded-xl w-full text-xs outline-none focus:border-sky-500">
+                    <input type="text" id="ai-problem-input" placeholder="✨ Arıza Sor: Örn: Su kaçağı var" class="bg-black/40 border border-white/5 text-white p-3 rounded-xl w-full text-xs outline-none focus:border-sky-500">
                     <button onclick="troubleshootWithAI()" class="bg-sky-600 text-white px-5 rounded-xl active:scale-95 transition-all"><i class="fa-solid fa-paper-plane"></i></button>
                 </div>
             </div>
@@ -332,6 +415,67 @@
         let runtimeInt = null;
         let hardwareState = { light: false, camera: false };
         let currentAIResponseText = "";
+
+        // --- MODÜL YÖNETİM SİSTEMİ (Yeni) ---
+        let userModules = JSON.parse(localStorage.getItem('akuadive_modules')) || {
+            depth: false, co: false, bio: false, hw: false, gps: false
+        };
+
+        function initModules() {
+            document.getElementById('mod-depth').checked = userModules.depth;
+            document.getElementById('mod-co').checked = userModules.co;
+            document.getElementById('mod-bio').checked = userModules.bio;
+            document.getElementById('mod-hw').checked = userModules.hw;
+            document.getElementById('mod-gps').checked = userModules.gps;
+            applyModulesToUI();
+        }
+
+        function updateModules() {
+            userModules.depth = document.getElementById('mod-depth').checked;
+            userModules.co = document.getElementById('mod-co').checked;
+            userModules.bio = document.getElementById('mod-bio').checked;
+            userModules.hw = document.getElementById('mod-hw').checked;
+            userModules.gps = document.getElementById('mod-gps').checked;
+            localStorage.setItem('akuadive_modules', JSON.stringify(userModules));
+            applyModulesToUI();
+        }
+
+        function applyModulesToUI() {
+            // Derinlik
+            if(userModules.depth) { document.getElementById('wrapper-depth').classList.remove('hidden'); document.getElementById('wrapper-chart').classList.remove('hidden'); }
+            else { document.getElementById('wrapper-depth').classList.add('hidden'); document.getElementById('wrapper-chart').classList.add('hidden'); }
+
+            // Biyometrik (Nabız/O2)
+            if(userModules.bio) document.getElementById('wrapper-bio').classList.remove('hidden');
+            else document.getElementById('wrapper-bio').classList.add('hidden');
+
+            // Karbonmonoksit
+            const mpuCard = document.getElementById('card-mpu');
+            if(userModules.co) { 
+                document.getElementById('card-co').classList.remove('hidden'); 
+                mpuCard.classList.remove('col-span-2');
+            } else { 
+                document.getElementById('card-co').classList.add('hidden'); 
+                mpuCard.classList.add('col-span-2');
+            }
+
+            // Harici Donanım (Kamera & Işık)
+            if(userModules.hw) document.getElementById('wrapper-hw-controls').classList.remove('hidden');
+            else document.getElementById('wrapper-hw-controls').classList.add('hidden');
+
+            // GPS / Harita
+            if(userModules.gps) document.getElementById('tab-map').classList.remove('hidden');
+            else document.getElementById('tab-map').classList.add('hidden');
+        }
+
+        function openModuleModal() { document.getElementById('module-modal').classList.remove('hidden'); }
+        function closeModuleModal() { document.getElementById('module-modal').classList.add('hidden'); }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initModules();
+            initChart();
+        });
+
 
         // --- HARİTA YÖNETİMİ ---
         let diveMap;
@@ -400,7 +544,6 @@
                 }
             });
         }
-        window.addEventListener('DOMContentLoaded', initChart);
 
         function updateDepthChart(newDepth) {
             depthDataPoints.push(newDepth);
@@ -424,7 +567,7 @@
             document.getElementById('tab-'+t).classList.add('active', 'text-white');
             document.getElementById('tab-'+t).classList.remove('text-slate-500');
 
-            if(t === 'map') {
+            if(t === 'map' && userModules.gps) {
                 initMap();
                 setTimeout(() => { diveMap.invalidateSize(); }, 100);
             }
@@ -465,17 +608,12 @@
                 
                 document.getElementById('btnConnect').className = "bg-sky-600 text-white px-5 py-2.5 rounded-full font-black text-[10px] border border-sky-400 shadow-lg"; 
                 document.getElementById('connectText').innerText = "AYRIL";
-            } catch (err) { 
-                console.log(err);
-            }
+            } catch (err) {}
         };
 
         async function sendCmd(cmd) {
             if(!rxChar) { showMsg('HATA', 'Sisteme bağlı değilsiniz.'); return; }
-            try { 
-                await rxChar.writeValue(new TextEncoder().encode(cmd)); 
-                showMsg('BAŞARILI', cmd + ' gönderildi.'); 
-            } catch (e) {}
+            try { await rxChar.writeValue(new TextEncoder().encode(cmd)); showMsg('BAŞARILI', cmd + ' gönderildi.'); } catch (e) {}
         }
 
         function toggleHardware(type) {
@@ -487,13 +625,9 @@
             const status = document.getElementById(type === 'light' ? 'statusLight' : 'statusCamera');
             
             if(hardwareState[type]) {
-                btn.classList.add('toggle-active'); 
-                status.innerText = "AKTİF"; 
-                status.classList.replace('text-slate-500', 'text-white');
+                btn.classList.add('toggle-active'); status.innerText = "AKTİF"; status.classList.replace('text-slate-500', 'text-white');
             } else {
-                btn.classList.remove('toggle-active'); 
-                status.innerText = type === 'light' ? "Kapalı" : "Beklemede"; 
-                status.classList.replace('text-white', 'text-slate-500');
+                btn.classList.remove('toggle-active'); status.innerText = type === 'light' ? "Kapalı" : "Beklemede"; status.classList.replace('text-white', 'text-slate-500');
             }
         }
 
@@ -504,69 +638,52 @@
             input.value = '';
         }
 
-        document.getElementById('toggleService').onclick = () => {
-            document.getElementById('service-area').classList.toggle('hidden');
-        };
+        document.getElementById('toggleService').onclick = () => { document.getElementById('service-area').classList.toggle('hidden'); };
 
         // --- GELEN VERİLERİ OKUMA ---
         function handleData(event) {
             const val = new TextDecoder().decode(event.target.value);
             const getVal = (reg) => { const m = val.match(reg); return m ? m[1] : null; };
 
-            if(val.includes("MOD:ACIK")) {
-                if(!runtimeInt) runtimeInt = setInterval(() => { runtimeSec++; renderRT(); }, 1000);
-            } else if(val.includes("MOD:KAPALI")) {
-                clearInterval(runtimeInt); runtimeInt = null;
-            }
+            if(val.includes("MOD:ACIK")) { if(!runtimeInt) runtimeInt = setInterval(() => { runtimeSec++; renderRT(); }, 1000); } 
+            else if(val.includes("MOD:KAPALI")) { clearInterval(runtimeInt); runtimeInt = null; }
 
-            // GPS Data
+            // 1. Orijinal İç Sensörler (DHT, NTC, Sıvı)
+            const dhtMatch = val.match(/DHT:([0-9.-]+)C\/\%([0-9.]+)/);
+            if(dhtMatch) {
+                document.getElementById('valKmpIsi').innerText = dhtMatch[1] + "°";
+                document.getElementById('valKmpNem').innerText = "%" + dhtMatch[2];
+            }
+            const ntc = getVal(/NTC:([0-9.-]+)C/);
+            if(ntc && ntc !== "-999") document.getElementById('valKmpNtc').innerText = ntc + "°";
+            if(val.includes("Su:VAR")) { document.getElementById('valKmpSu').innerText = "SIZINTI!"; document.getElementById('valKmpSu').className = "text-xs font-black text-red-500 animate-pulse"; }
+            else if (val.includes("Su:YOK")) { document.getElementById('valKmpSu').innerText = "NORMAL"; document.getElementById('valKmpSu').className = "text-xs font-black text-emerald-400"; }
+
+            // 2. Modüler Sensörler (Eğer varsa oku)
             const gpsParts = val.match(/GPS:([0-9.-]+),([0-9.-]+)/);
-            if(gpsParts) {
-                updateMapLocation(parseFloat(gpsParts[1]), parseFloat(gpsParts[2]));
-            }
+            if(gpsParts) updateMapLocation(parseFloat(gpsParts[1]), parseFloat(gpsParts[2]));
 
-            // Derinlik ve Grafik
             const depth = getVal(/EXT_P:([0-9.]+)M/); 
-            if(depth) {
-                document.getElementById('valDerinlik').innerText = depth;
-                updateDepthChart(parseFloat(depth));
-            }
+            if(depth) { document.getElementById('valDerinlik').innerText = depth; updateDepthChart(parseFloat(depth)); }
 
-            // CO Sensör Analizi
             const coPpm = getVal(/CO_PPM:([0-9]+)/);
             if(coPpm) {
                 const ppm = parseInt(coPpm);
                 document.getElementById('valCoText').innerText = ppm;
-                
-                const barFill = document.getElementById('coBarFill');
-                const coStatus = document.getElementById('valCoStatus');
-                const cardCo = document.getElementById('card-co');
-                
-                let fillHeight = Math.min(100, (ppm / 100) * 100);
-                barFill.style.height = fillHeight + "%";
-
+                const barFill = document.getElementById('coBarFill'), coStatus = document.getElementById('valCoStatus'), cardCo = document.getElementById('card-co');
+                barFill.style.height = Math.min(100, (ppm / 100) * 100) + "%";
                 if(ppm > 50) { 
-                    barFill.className = "vertical-bar-fill bg-red-500";
-                    document.getElementById('valCoText').className = "text-lg font-black text-red-500 leading-none";
-                    coStatus.innerText = "TEHLİKE"; 
-                    coStatus.className = "text-[8px] font-bold text-red-500 uppercase tracking-widest mt-1";
-                    cardCo.classList.add('alarm-active');
+                    barFill.className = "vertical-bar-fill bg-red-500"; document.getElementById('valCoText').className = "text-lg font-black text-red-500 leading-none";
+                    coStatus.innerText = "TEHLİKE"; coStatus.className = "text-[8px] font-bold text-red-500 uppercase tracking-widest mt-1"; cardCo.classList.add('alarm-active');
                 } else if (ppm > 20) { 
-                    barFill.className = "vertical-bar-fill bg-orange-400";
-                    document.getElementById('valCoText').className = "text-lg font-black text-orange-400 leading-none";
-                    coStatus.innerText = "DİKKAT"; 
-                    coStatus.className = "text-[8px] font-bold text-orange-400 uppercase tracking-widest mt-1";
-                    cardCo.classList.remove('alarm-active');
+                    barFill.className = "vertical-bar-fill bg-orange-400"; document.getElementById('valCoText').className = "text-lg font-black text-orange-400 leading-none";
+                    coStatus.innerText = "DİKKAT"; coStatus.className = "text-[8px] font-bold text-orange-400 uppercase tracking-widest mt-1"; cardCo.classList.remove('alarm-active');
                 } else { 
-                    barFill.className = "vertical-bar-fill bg-emerald-500";
-                    document.getElementById('valCoText').className = "text-lg font-black text-emerald-400 leading-none";
-                    coStatus.innerText = "NORMAL"; 
-                    coStatus.className = "text-[8px] font-bold text-emerald-600 uppercase tracking-widest mt-1";
-                    cardCo.classList.remove('alarm-active');
+                    barFill.className = "vertical-bar-fill bg-emerald-500"; document.getElementById('valCoText').className = "text-lg font-black text-emerald-400 leading-none";
+                    coStatus.innerText = "NORMAL"; coStatus.className = "text-[8px] font-bold text-emerald-600 uppercase tracking-widest mt-1"; cardCo.classList.remove('alarm-active');
                 }
             }
 
-            // Batarya ve Diğer Sensörler
             const volt = getVal(/GUC:([0-9.]+)V/);
             if(volt) {
                 const pct = Math.max(0, Math.min(100, ((parseFloat(volt) - 9.6) / 3) * 100));
@@ -590,9 +707,7 @@
                     if(alarm.includes("DEVRILME")) cards.mpu.classList.add('alarm-active');
                     if(alarm.includes("NABIZ")) cards.pulse.classList.add('alarm-active');
                     if(alarm !== lastAlarm) addLog(alarm);
-                } else { 
-                    Object.values(cards).forEach(c => c.classList.remove('alarm-active')); 
-                }
+                } else { Object.values(cards).forEach(c => c.classList.remove('alarm-active')); }
                 lastAlarm = alarm;
             }
         }
@@ -602,69 +717,41 @@
             const endpoint = isTTS ? 'gemini-2.5-flash-preview-tts' : GEMINI_MODEL;
             const url = `https://generativelanguage.googleapis.com/v1beta/models/${endpoint}:${isTTS ? 'generateContent' : 'generateContent'}?key=${apiKey}`;
             const payload = { contents: [{ parts: [{ text: prompt }] }], systemInstruction: { parts: [{ text: system }] } };
-            
-            if (isTTS) {
-                payload.generationConfig = { 
-                    responseModalities: ["AUDIO"], 
-                    speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Puck" } } } 
-                };
-            }
-            
+            if (isTTS) payload.generationConfig = { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Puck" } } } };
             for (let i = 0; i < 3; i++) { 
-                try { 
-                    const r = await fetch(url, { method: 'POST', body: JSON.stringify(payload) }); 
-                    return await r.json(); 
-                } catch (e) { 
-                    await new Promise(r => setTimeout(r, 1000)); 
-                } 
+                try { const r = await fetch(url, { method: 'POST', body: JSON.stringify(payload) }); return await r.json(); } 
+                catch (e) { await new Promise(r => setTimeout(r, 1000)); } 
             }
             return null;
         }
 
         async function speakAIResponse() {
             if (!currentAIResponseText) return;
-            const btn = document.getElementById('ai-tts-btn');
-            btn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i>...';
-            
+            const btn = document.getElementById('ai-tts-btn'); btn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i>...';
             const res = await callGeminiAPI(`Say clearly: ${currentAIResponseText}`, "Sen Akua Dive sisteminin sesli asistanısın.", true);
-            
             if (res && res.candidates && res.candidates[0].content.parts[0].inlineData) {
                 const b64 = res.candidates[0].content.parts[0].inlineData.data;
                 const sr = parseInt(res.candidates[0].content.parts[0].inlineData.mimeType.match(/rate=(\d+)/)?.[1] || "24000");
                 const pcm = new Int16Array(Uint8Array.from(atob(b64), c => c.charCodeAt(0)).buffer);
-                
-                const buf = new ArrayBuffer(44 + pcm.length * 2);
-                const view = new DataView(buf);
+                const buf = new ArrayBuffer(44 + pcm.length * 2); const view = new DataView(buf);
                 const ws = (o, s) => { for(let i=0; i<s.length; i++) view.setUint8(o+i, s.charCodeAt(i)); };
-                
                 ws(0,'RIFF'); view.setUint32(4, 36+pcm.length*2, true); ws(8,'WAVE'); ws(12,'fmt '); 
                 view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true); 
                 view.setUint32(24, sr, true); view.setUint32(28, sr*2, true); view.setUint16(32, 2, true); 
                 view.setUint16(34, 16, true); ws(36,'data'); view.setUint32(40, pcm.length*2, true);
                 for(let i=0; i<pcm.length; i++) view.setInt16(44+i*2, pcm[i], true);
-                
-                const audio = new Audio(URL.createObjectURL(new Blob([buf], { type: 'audio/wav' })));
-                audio.play();
+                new Audio(URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }))).play();
             }
             btn.innerHTML = '<i class="fa-solid fa-volume-high"></i> ✨ Seslendir';
         }
 
         function openAIModal(title) { 
-            document.getElementById('ai-modal-title').innerText = title; 
-            document.getElementById('ai-modal').classList.remove('hidden'); 
+            document.getElementById('ai-modal-title').innerText = title; document.getElementById('ai-modal').classList.remove('hidden'); 
             document.getElementById('ai-content').innerHTML = '<div class="space-y-4" id="ai-loading"><div class="h-4 shimmer rounded-full w-3/4"></div><div class="h-4 shimmer rounded-full w-full"></div></div>'; 
-            document.getElementById('ai-tts-btn').classList.add('hidden'); 
-            currentAIResponseText = "";
+            document.getElementById('ai-tts-btn').classList.add('hidden'); currentAIResponseText = "";
         }
-        
-        function closeAIModal() { 
-            document.getElementById('ai-modal').classList.add('hidden'); 
-        }
-        
-        function updateAIContent(t) { 
-            document.getElementById('ai-content').innerHTML = t.replace(/\n/g, '<br>'); 
-            document.getElementById('ai-tts-btn').classList.remove('hidden'); 
-        }
+        function closeAIModal() { document.getElementById('ai-modal').classList.add('hidden'); }
+        function updateAIContent(t) { document.getElementById('ai-content').innerHTML = t.replace(/\n/g, '<br>'); document.getElementById('ai-tts-btn').classList.remove('hidden'); }
 
         async function runAI(title, prompt, sysStr) {
             openAIModal(title);
@@ -673,7 +760,7 @@
             updateAIContent(currentAIResponseText);
         }
 
-        const getSysData = () => `Batarya:${document.getElementById('valGucYuzde').innerText}, Kutu Basıncı:${document.getElementById('valBsn').innerText}, CO:${document.getElementById('valCoText').innerText}ppm, Nabız:${document.getElementById('valNabiz').innerText}`;
+        const getSysData = () => `Batarya:${document.getElementById('valGucYuzde').innerText}, Kutu Basıncı:${document.getElementById('valBsn').innerText}, Kutu Isı: ${document.getElementById('valKmpIsi').innerText}`;
         
         function analyzeSystemWithAI() { runAI("DURUM ANALİZİ", `Sistem: ${getSysData()}`, "Akua Dive asistanısın. Türkçe, kısa teknik yanıt ver."); }
         function generateEmergencyProtocol() { runAI("🚨 ACİL DURUM", `ACİL DURUM! Sensörler: ${getSysData()}. Tahliye talimatları ver.`, "Kriz yöneticisisin. Madde madde, hayati talimatlar ver. Türkçe."); }
@@ -686,27 +773,21 @@
 
         function renderRT() { document.getElementById('totalRuntimeDisplay').innerText = `${Math.floor(runtimeSec/3600)}s ${Math.floor((runtimeSec%3600)/60)}d ${runtimeSec%60}s`; }
         function addLog(msg) { 
-            const n = new Date(); 
-            errorLogs.unshift({ msg, time: n.toLocaleTimeString('tr-TR') }); 
-            if(errorLogs.length > 30) errorLogs.pop(); 
-            localStorage.setItem('akuadive_logs', JSON.stringify(errorLogs)); 
-            renderLogs(); 
+            const n = new Date(); errorLogs.unshift({ msg, time: n.toLocaleTimeString('tr-TR') }); 
+            if(errorLogs.length > 30) errorLogs.pop(); localStorage.setItem('akuadive_logs', JSON.stringify(errorLogs)); renderLogs(); 
         }
         function renderLogs() {
             const c = document.getElementById('logsContainer');
             if(errorLogs.length === 0) { c.innerHTML = '<p class="text-center text-[10px] py-8 text-slate-600 italic">Kayıt yok.</p>'; return; }
             c.innerHTML = ''; 
             errorLogs.forEach(l => { 
-                const el = document.createElement('div'); 
-                el.className = "p-3 rounded-xl bg-slate-800 border-l-4 border-red-500 text-[10px] font-black flex justify-between"; 
-                el.innerHTML = `<span class="text-red-400 uppercase">${l.msg}</span><span class="text-slate-600">${l.time}</span>`; 
-                c.appendChild(el); 
+                const el = document.createElement('div'); el.className = "p-3 rounded-xl bg-slate-800 border-l-4 border-red-500 text-[10px] font-black flex justify-between"; 
+                el.innerHTML = `<span class="text-red-400 uppercase">${l.msg}</span><span class="text-slate-600">${l.time}</span>`; c.appendChild(el); 
             });
         }
         function resetRuntime() { runtimeSec = 0; localStorage.setItem('akuadive_runtime', '0'); renderRT(); }
         
-        renderRT(); 
-        renderLogs();
+        renderRT(); renderLogs();
     </script>
 </body>
 </html>
