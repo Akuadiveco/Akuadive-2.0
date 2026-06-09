@@ -1,906 +1,906 @@
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#020617">
-    <title>Akua Dive S3 Modular OS</title>
-    
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M15 85C25 65 35 40 50 15C65 40 75 65 85 85H68C65 75 62 68 58 62C55 58 52 56 48 58C44 60 41 68 38 85H15Z' fill='%233b82f6'/></svg>">
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;600;800&display=swap');
-
-        :root { --akua-blue: #0ea5e9; --akua-danger: #ef4444; }
-        body { background-color: #020617; color: #f8fafc; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; user-select: none; }
-        h1, .tactical-font { font-family: 'Orbitron', sans-serif; }
-        
-        .card { background-color: #0f172a; border-radius: 1.25rem; border: 1px solid #1e293b; transition: all 0.3s ease; overflow: hidden; cursor: pointer; }
-        .card:active { transform: scale(0.98); }
-        
-        @keyframes alert-pulse { 
-            0%, 100% { background-color: #0f172a; border-color: #1e293b; } 
-            50% { background-color: #450a0a; border-color: #ef4444; box-shadow: 0 0 20px rgba(239, 68, 68, 0.4); } 
-        }
-        .alarm-active { animation: alert-pulse 1s infinite !important; }
-
-        .glass-header { background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(20px); border-bottom: 1px solid #1e293b; }
-        .tab-btn.active { color: var(--akua-blue); border-bottom: 3px solid var(--akua-blue); font-weight: 800; }
-        
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        .modal-bg { background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); }
-        
-        input[type="number"] { background: #090d16; border: 1px solid #1e293b; color: white; border-radius: 12px; padding: 10px; width: 100%; outline: none; text-align: center; font-weight: bold;}
-        input[type="number"]:focus { border-color: #0ea5e9; }
-
-        /* Fab Button CSS (Modül Ekleme Butonu) */
-        .fab-btn { position: fixed; bottom: 24px; right: 24px; width: 56px; height: 56px; background-color: #0ea5e9; border-radius: 50%; box-shadow: 0 4px 20px rgba(14, 165, 233, 0.5); display: flex; align-items: center; justify-content: center; font-size: 24px; color: white; z-index: 90; transition: transform 0.2s; cursor: pointer; }
-        .fab-btn:active { transform: scale(0.9); }
-        .module-checkbox { accent-color: #0ea5e9; width: 18px; height: 18px; cursor: pointer; }
-    </style>
-</head>
-<body class="h-screen flex flex-col overflow-hidden">
-
-    <!-- HEADER -->
-    <header class="glass-header z-50 p-4 sticky top-0 flex justify-between items-center">
-        <div class="flex items-center gap-3">
-            <div style="width: 38px; height: 38px; filter: drop-shadow(0 0 8px rgba(14, 165, 233, 0.4));">
-                <svg width="38" height="38" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M15 85C25 65 35 40 50 15C65 40 75 65 85 85H68C65 75 62 68 58 62C55 58 52 56 48 58C44 60 41 68 38 85H15Z" fill="url(#logoGradient)" />
-                    <defs>
-                        <linearGradient id="logoGradient" x1="50" y1="15" x2="50" y2="85" gradientUnits="userSpaceOnUse">
-                            <stop stop-color="#38bdf8" />
-                            <stop offset="1" stop-color="#0ea5e9" />
-                        </linearGradient>
-                    </defs>
-                </svg>
-            </div>
-            <div>
-                <h1 class="text-lg font-black tracking-tighter leading-none text-white">AKUA DIVE</h1>
-                <p class="text-[9px] text-sky-400 font-bold tracking-[0.3em] uppercase mt-1">LOG OS v7.3</p>
-            </div>
-        </div>
-        <button id="btnConnect" class="bg-slate-800 text-white px-5 py-2.5 rounded-full font-black text-[10px] border border-slate-700 flex items-center gap-2 active:scale-95 transition-all">
-            <i class="fa-brands fa-bluetooth-b text-sky-400"></i> <span id="connectText">BAĞLAN</span>
-        </button>
-    </header>
-
-    <!-- BİLGİ/ALARM MESAJ BARBARI -->
-    <div id="msg-box" class="fixed top-24 left-1/2 -translate-x-1/2 bg-slate-900 border border-sky-500/30 text-white px-6 py-4 rounded-3xl shadow-2xl z-[100] flex items-center gap-4 opacity-0 pointer-events-none transition-all duration-300">
-        <div class="p-2 rounded-full bg-sky-500/10"><i class="fa-solid fa-circle-info text-sky-400"></i></div>
-        <div>
-            <h4 id="msg-title" class="font-black text-[10px] uppercase tracking-widest"></h4>
-            <p id="msg-text" class="text-[10px] text-slate-400"></p>
-        </div>
-    </div>
-
-    <!-- MODULE MANAGER MODAL (MODÜL EKLEME PANELİ) -->
-    <div id="module-modal" style="display: none;" class="fixed inset-0 bg-black/95 z-[120] flex items-center justify-center p-5 backdrop-blur-2xl">
-        <div class="bg-slate-900 w-full max-w-lg rounded-[2.5rem] border border-sky-500/20 overflow-hidden shadow-2xl flex flex-col">
-            <div class="p-6 border-b border-white/5 flex justify-between items-center bg-sky-500/5">
-                <div class="flex items-center gap-3">
-                    <i class="fa-solid fa-layer-group text-sky-400 text-xl"></i>
-                    <h3 class="font-black text-[11px] tracking-[0.2em] text-sky-400 uppercase">Donanım Modülleri</h3>
-                </div>
-                <button onclick="closeModuleModal()" class="text-slate-500 hover:text-white"><i class="fa-solid fa-circle-xmark text-3xl"></i></button>
-            </div>
-            <div class="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
-                <p class="text-[10px] text-slate-400 mb-4">Metal paslanmaz kutuya bağladığınız harici donanımları aktif edin.</p>
-                <label class="flex items-center gap-4 p-4 bg-slate-800/50 rounded-xl border border-white/5 cursor-pointer">
-                    <input type="checkbox" id="mod-depth" class="module-checkbox" onchange="updateModules()">
-                    <div><span class="block text-xs font-black text-white">Derinlik & Dış Basınç Profili</span></div>
-                </label>
-                <label class="flex items-center gap-4 p-4 bg-slate-800/50 rounded-xl border border-white/5 cursor-pointer">
-                    <input type="checkbox" id="mod-co" class="module-checkbox" onchange="updateModules()">
-                    <div><span class="block text-xs font-black text-white">Karbonmonoksit (CO) Analizörü</span></div>
-                </label>
-                <label class="flex items-center gap-4 p-4 bg-slate-800/50 rounded-xl border border-white/5 cursor-pointer">
-                    <input type="checkbox" id="mod-bio" class="module-checkbox" onchange="updateModules()">
-                    <div><span class="block text-xs font-black text-white">Dalgıç Biyometrik (Nabız & O2)</span></div>
-                </label>
-                <label class="flex items-center gap-4 p-4 bg-slate-800/50 rounded-xl border border-white/5 cursor-pointer">
-                    <input type="checkbox" id="mod-gps" class="module-checkbox" onchange="updateModules()">
-                    <div><span class="block text-xs font-black text-white">Uydu Konum (GPS) Modülü</span></div>
-                </label>
-            </div>
-            <div class="p-4 bg-black/40 border-t border-white/5">
-                <button onclick="closeModuleModal()" class="w-full bg-sky-600 text-white font-black text-[11px] tracking-widest py-3 rounded-xl">KAYDET VE KAPAT</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modül Ekleme (FAB) Butonu -->
-    <button onclick="openModuleModal()" class="fab-btn"><i class="fa-solid fa-plus"></i></button>
-
-    <main class="flex-1 overflow-y-auto p-4 pb-32">
-        <!-- SEKMELER -->
-        <div class="flex gap-4 border-b border-white/5 mb-5 overflow-x-auto pb-2 scrollbar-hide whitespace-nowrap">
-            <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-btn active pb-2 text-[10px] font-black uppercase tracking-[0.1em] transition-all">OPERASYON</button>
-            <button onclick="switchTab('controls')" id="tab-controls" class="tab-btn pb-2 text-[10px] font-black uppercase tracking-[0.1em] transition-all text-slate-500">KONTROL</button>
-            <button onclick="switchTab('logs')" id="tab-logs" class="tab-btn pb-2 text-[10px] font-black uppercase tracking-[0.1em] transition-all text-slate-500">KAYITLAR</button>
-        </div>
-
-        <!-- 1. OPERASYON SEKMESİ -->
-        <div id="view-dashboard" class="space-y-4">
-            
-            <!-- GÜÇ VE BASINÇ -->
-            <div class="grid grid-cols-2 gap-3">
-                <div id="card-voltaj" class="card p-5 flex flex-col items-center justify-center animate-none" onclick="openLimitModal('voltaj', 'Batarya Voltajı (V)')">
-                    <span class="text-[10px] text-slate-500 font-black mb-1 tracking-widest uppercase text-center">BATARYA SEVİYESİ</span>
-                    <div class="flex items-end gap-1">
-                        <span id="valGucYuzde" class="text-4xl font-black text-emerald-400">--%</span>
-                    </div>
-                    <span class="text-[11px] text-emerald-500 font-bold mt-1">( <span id="valVoltaj">--</span> V )</span>
-                    <span id="valGucSure" class="text-[9px] text-emerald-600 font-black mt-2 tracking-widest lowercase">Tahmini: -- sa -- dk</span>
-                </div>
-                
-                <div id="card-basinc" class="card p-5 flex flex-col items-center justify-center relative animate-none" onclick="openLimitModal('basinc', 'Sistem Basıncı (PSI)')">
-                    <span class="text-[10px] text-slate-500 font-black mb-1 tracking-widest uppercase text-center">KUTU BASINCI</span>
-                    <span id="valBsn" class="text-4xl font-black text-sky-400">--</span>
-                    <span class="text-[10px] text-sky-500/70 font-black tracking-widest mt-1">PSI</span>
-                    <span id="valLmt" class="text-[9px] text-sky-500/70 font-black tracking-widest mt-2 bg-sky-900/30 px-2 py-0.5 rounded">Lmt: -- / --</span>
-                </div>
-            </div>
-
-            <!-- DİNAMİK DERİNLİK MODÜLÜ (MODÜL AYARLARINA GÖRE GÖZÜKÜR) -->
-            <div id="wrapper-depth" style="display: none;" class="grid grid-cols-2 gap-3">
-                <div id="card-depth" class="card p-4 flex flex-col items-center justify-center bg-blue-950/20 border-blue-500/30" onclick="openLimitModal('depth', 'Derinlik (MT)')">
-                    <span class="text-[9px] text-blue-400 font-black mb-1 tracking-widest uppercase">DERİNLİK</span>
-                    <div class="flex items-baseline gap-0.5">
-                        <span id="valDerinlik" class="text-3xl font-black text-white">0.0</span>
-                        <span class="text-[10px] font-bold text-blue-400">MT</span>
-                    </div>
-                </div>
-                <div id="card-watertemp" class="card p-4 flex flex-col items-center justify-center bg-cyan-950/20 border-cyan-500/30" onclick="openLimitModal('waterTemp', 'Su Sıcaklığı (°C)')">
-                    <span class="text-[9px] text-cyan-400 font-black mb-1 tracking-widest uppercase">SU TEMPERATURE</span>
-                    <div class="flex items-baseline gap-0.5">
-                        <span id="valSuIsi" class="text-3xl font-black text-white">18.5</span>
-                        <span class="text-[10px] font-bold text-cyan-400">°C</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- SENSÖR GRUPLARI -->
-            <div class="space-y-3">
-                <!-- KOMPRESÖR GRUBU -->
-                <div class="card p-4 bg-slate-900/80 border-slate-700 cursor-default">
-                    <div class="flex justify-between items-center mb-3">
-                        <h3 class="text-[10px] font-black text-slate-400 tracking-widest uppercase"><i class="fa-solid fa-microchip text-sky-500 mr-1"></i> KOMPRESÖR GRUBU</h3>
-                    </div>
-                    <div class="grid grid-cols-4 gap-2 text-center">
-                        <div id="card-kmpDhtIsi" class="bg-black/40 p-2 rounded-lg border border-white/5 cursor-pointer" onclick="openLimitModal('kmpDhtIsi', 'Komp. DHT Isı (°C)')">
-                            <span class="block text-[8px] text-slate-500 font-bold uppercase mb-1">DHT Isı</span>
-                            <span id="valKmpDhtIsi" class="text-sm font-black text-white">--</span>
-                        </div>
-                        <div id="card-kmpNem" class="bg-black/40 p-2 rounded-lg border border-white/5 cursor-pointer" onclick="openLimitModal('kmpNem', 'Komp. Ortam Nemi (%)')">
-                            <span class="block text-[8px] text-slate-500 font-bold uppercase mb-1">DHT Nem</span>
-                            <span id="valKmpNem" class="text-sm font-black text-white">--</span>
-                        </div>
-                        <div id="card-kmpNtc" class="bg-black/40 p-2 rounded-lg border border-white/5 cursor-pointer" onclick="openLimitModal('kmpNtc', 'Komp. NTC Yüzey Isısı (°C)')">
-                            <span class="block text-[8px] text-slate-500 font-bold uppercase mb-1">NTC Isı</span>
-                            <span id="valKmpNtc" class="text-sm font-black text-white">--</span>
-                        </div>
-                        <div id="card-kmpSu" class="bg-black/40 p-2 rounded-lg border border-white/5 flex flex-col justify-center">
-                            <span class="block text-[7px] text-slate-500 font-bold uppercase mb-0.5 leading-tight">Su/Nem<br>Durumu</span>
-                            <span id="valKmpSu" class="text-[9px] font-black text-emerald-400 tracking-widest">YOK</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- BATARYA GRUBU -->
-                <div class="card p-4 bg-slate-900/80 border-slate-700 cursor-default">
-                    <div class="flex justify-between items-center mb-3">
-                        <h3 class="text-[10px] font-black text-slate-400 tracking-widest uppercase"><i class="fa-solid fa-battery-half text-emerald-500 mr-1"></i> BATARYA GRUBU</h3>
-                    </div>
-                    <div class="grid grid-cols-4 gap-2 text-center">
-                        <div id="card-batDhtIsi" class="bg-black/40 p-2 rounded-lg border border-white/5 cursor-pointer" onclick="openLimitModal('batDhtIsi', 'Batarya DHT Isı (°C)')">
-                            <span class="block text-[8px] text-slate-500 font-bold uppercase mb-1">DHT Isı</span>
-                            <span id="valBatDhtIsi" class="text-sm font-black text-white">--</span>
-                        </div>
-                        <div id="card-batNem" class="bg-black/40 p-2 rounded-lg border border-white/5 cursor-pointer" onclick="openLimitModal('batNem', 'Batarya Ortam Nemi (%)')">
-                            <span class="block text-[8px] text-slate-500 font-bold uppercase mb-1">DHT Nem</span>
-                            <span id="valBatNem" class="text-sm font-black text-white">--</span>
-                        </div>
-                        <div id="card-batNtc" class="bg-black/40 p-2 rounded-lg border border-white/5 cursor-pointer" onclick="openLimitModal('batNtc', 'Batarya NTC Yüzey Isısı (°C)')">
-                            <span class="block text-[8px] text-slate-500 font-bold uppercase mb-1">NTC Isı</span>
-                            <span id="valBatNtc" class="text-sm font-black text-white">--</span>
-                        </div>
-                        <div id="card-batSu" class="bg-black/40 p-2 rounded-lg border border-white/5 flex flex-col justify-center">
-                            <span class="block text-[7px] text-slate-500 font-bold uppercase mb-0.5 leading-tight">Su/Nem<br>Durumu</span>
-                            <span id="valBatSu" class="text-[9px] font-black text-emerald-400 tracking-widest">YOK</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- DİNAMİK MODÜLLER (CO VE BİYOMETRİ) -->
-                <div class="grid grid-cols-2 gap-3">
-                    <div id="card-co" style="display: none;" class="card p-4 bg-orange-950/10 border-orange-500/20" onclick="openLimitModal('co', 'CO Seviyesi (PPM)')">
-                        <span class="block text-[8px] text-orange-400 font-black mb-1 tracking-widest uppercase text-center"><i class="fa-solid fa-triangle-exclamation mr-1"></i> CO SEVİYESİ</span>
-                        <div class="text-center">
-                            <span id="valCO" class="text-2xl font-black text-white">0</span>
-                            <span class="text-[10px] font-bold text-orange-400">PPM</span>
-                        </div>
-                    </div>
-                    <div id="card-bio" style="display: none;" class="card p-4 bg-red-950/10 border-red-500/20" onclick="openLimitModal('pulse', 'Kalp Atışı (BPM)')">
-                        <span class="block text-[8px] text-red-400 font-black mb-1 tracking-widest uppercase text-center"><i class="fa-solid fa-heartbeat mr-1"></i> BİYOMETRİK</span>
-                        <div class="text-center space-x-2">
-                            <span id="valPulse" class="text-xl font-black text-white">72</span><span class="text-[8px] text-red-400">BPM</span>
-                            <span id="valO2" class="text-xl font-black text-white">99</span><span class="text-[8px] text-red-400">%O2</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- DİNAMİK GPS MODÜLÜ -->
-                <div id="card-gps" style="display: none;" class="card p-4 bg-violet-950/10 border-violet-500/20 cursor-default">
-                    <div class="flex justify-between items-center text-[8px] text-violet-400 font-black tracking-widest uppercase mb-1">
-                        <span><i class="fa-solid fa-satellite-dish mr-1"></i> GPS SATELLITE KONUMU</span>
-                        <span id="valGpsSats" class="text-white">6 SATS</span>
-                    </div>
-                    <div class="text-[10px] font-mono text-slate-300 flex justify-between">
-                        <span>LAT: <span id="valGpsLat" class="text-white font-bold">36.8123 N</span></span>
-                        <span>LON: <span id="valGpsLon" class="text-white font-bold">34.6291 E</span></span>
-                    </div>
-                </div>
-
-                <!-- SABİT DENGE DURUM KARTI (İLK HALİNDEKİ GİBİ TERAZİ SİMÜLASYONLU) -->
-                <div id="card-denge" class="card p-4 bg-slate-900/80 border-slate-700" onclick="openLimitModal('egim', 'Denge / Eğim Açısı (°)')">
-                    <div class="flex justify-between items-center mb-2">
-                        <h3 class="text-[10px] font-black text-slate-400 tracking-widest uppercase"><i class="fa-solid fa-compass text-amber-500 mr-1"></i> DENGE & EĞİM DURUMU</h3>
-                        <span id="valDengeDurum" class="text-[9px] font-black text-emerald-400 tracking-widest uppercase">STABİL</span>
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <div class="flex items-baseline gap-1">
-                            <span id="valDengeAci" class="text-3xl font-black text-white">0°</span>
-                            <span class="text-[9px] font-bold text-slate-500 uppercase">Eğim Açısı</span>
-                        </div>
-                        <!-- Mini Elektronik Su Terazisi -->
-                        <div class="w-12 h-12 rounded-full border border-slate-700 flex items-center justify-center relative bg-black/40">
-                            <div class="absolute inset-2 rounded-full border border-dashed border-slate-800"></div>
-                            <div id="denge-dot" class="w-3 h-3 rounded-full bg-emerald-500 transition-all duration-300 absolute" style="top: calc(50% - 6px); left: calc(50% - 6px);"></div>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-            
-            <p class="text-center text-[10px] text-slate-500 mt-4">* Limit ayarlamak için ilgili kutucuğa tıklayın.</p>
-        </div>
-
-        <!-- 2. KONTROL SEKMESİ -->
-        <div id="view-controls" style="display: none;" class="space-y-4">
-            <!-- DONANIM TESTLERİ -->
-            <div class="card p-5 cursor-default">
-                <h3 class="text-[10px] font-black text-slate-400 tracking-widest uppercase mb-4 border-b border-white/5 pb-2">DONANIM TESTLERİ</h3>
-                <div class="grid grid-cols-2 gap-4">
-                    <button onclick="sendCommand('T_BUZ')" class="bg-slate-900/60 border border-slate-800 text-slate-300 py-4 rounded-xl flex items-center justify-center gap-2 font-black text-xs active:bg-slate-800 active:scale-95 transition-all">
-                        <i class="fa-solid fa-volume-high text-sky-400"></i>
-                        <span>SES</span>
-                    </button>
-                    <button onclick="sendCommand('T_VIB')" class="bg-slate-900/60 border border-slate-800 text-slate-300 py-4 rounded-xl flex items-center justify-center gap-2 font-black text-xs active:bg-slate-800 active:scale-95 transition-all">
-                        <span>TİTREŞİM</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- HAVA BASINCI LİMİT AYARI -->
-            <div class="card p-5 cursor-default">
-                <h3 class="text-[10px] font-black text-sky-400 tracking-widest uppercase mb-4 border-b border-white/5 pb-2">HAVA BASINCI LİMİT AYARI</h3>
-                <div class="grid grid-cols-2 gap-4">
-                    <!-- Min Limit Ayarı -->
-                    <div class="flex items-center gap-2">
-                        <input type="number" id="input-press-min" step="0.1" class="text-center font-bold text-white outline-none">
-                        <button onclick="savePressureLimit('min')" class="bg-sky-950 border border-sky-500/30 text-sky-400 px-4 py-2.5 rounded-xl font-black text-xs active:scale-95 transition-all">OK</button>
-                    </div>
-                    <!-- Max Limit Ayarı -->
-                    <div class="flex items-center gap-2">
-                        <input type="number" id="input-press-max" step="0.1" class="text-center font-bold text-white outline-none">
-                        <button onclick="savePressureLimit('max')" class="bg-sky-950 border border-sky-500/30 text-sky-400 px-4 py-2.5 rounded-xl font-black text-xs active:scale-95 transition-all">OK</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- SERVİS ERİŞİMİ SEÇENEKLERİ (Tıklanabilir Kesikli Kart) -->
-            <div id="service-access-header" onclick="toggleServiceAccess()" class="border border-dashed border-slate-700 rounded-2xl p-4 text-center text-slate-500 font-bold text-[10px] tracking-[0.2em] uppercase cursor-pointer active:scale-98 transition">
-                SERVİS ERİŞİMİ
-            </div>
-
-            <!-- Servis Paneli İçeriği -->
-            <div id="service-access-panel" style="display: none;" class="card p-5 space-y-4 cursor-default">
-                <!-- Görev Süresi Bilgisi -->
-                <div class="bg-black/40 p-4 rounded-xl border border-white/5 flex justify-between items-center">
-                    <div>
-                        <span class="block text-[10px] text-slate-400 font-bold uppercase">Toplam Görev Süresi</span>
-                        <span id="valTotalRuntime" class="text-lg font-black text-white">0 sa 0 dk</span>
-                    </div>
-                    <i class="fa-solid fa-clock-rotate-left text-2xl text-slate-600"></i>
-                </div>
-
-                <!-- Denge Sıfırlama Butonu (mpu.reset) -->
-                <button onclick="sendCommand('mpu.reset')" class="w-full bg-slate-850 border border-slate-700 text-amber-400 p-4 rounded-xl flex justify-between items-center active:bg-slate-800 transition">
-                    <span class="text-[11px] font-black uppercase tracking-widest"><i class="fa-solid fa-balance-scale mr-2 text-amber-500"></i> Denge Kalibrasyonu (Sıfırla)</span>
-                    <i class="fa-solid fa-arrows-spin text-amber-500/50"></i>
-                </button>
-
-                <!-- Görev Süresini Sıfırla -->
-                <button onclick="resetTotalRuntime()" class="w-full bg-red-900/20 border border-red-900/50 text-red-400 p-4 rounded-xl flex justify-between items-center active:bg-red-900/40 transition">
-                    <span class="text-[11px] font-black uppercase tracking-widest"><i class="fa-solid fa-trash-can mr-2"></i> Görev Süresini Sıfırla</span>
-                    <i class="fa-solid fa-rotate-left text-red-500/50"></i>
-                </button>
-            </div>
-        </div>
-
-        <!-- 3. KAYITLAR SEKMESİ -->
-        <div id="view-logs" style="display: none;" class="space-y-4">
-            <!-- Son 10 Kayıt -->
-            <div class="card p-5 cursor-default">
-                <h3 class="text-[11px] font-black text-slate-400 tracking-widest uppercase mb-4 border-b border-white/5 pb-2">Son 10 Operasyon (Dalış / Test)</h3>
-                <div id="diveListContainer" class="space-y-2 max-h-60 overflow-y-auto pr-1">
-                    <p class="text-[10px] text-slate-500 italic text-center py-4">Kayıt bulunamadı.</p>
-                </div>
-            </div>
-
-            <!-- Analiz Grafiği -->
-            <div id="diveChartCard" class="card p-3 bg-slate-900/40 cursor-default" style="display: none;">
-                <div class="flex justify-between items-center mb-2 px-1">
-                    <span id="chartTitle" class="text-[10px] font-black text-sky-400 tracking-widest uppercase"><i class="fa-solid fa-chart-area"></i> Dalış Analizi</span>
-                    <button onclick="closeChart()" class="text-slate-500 hover:text-white p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
-                </div>
-                <div class="h-48 w-full"><canvas id="sensorChart"></canvas></div>
-                
-                <div class="mt-4 pt-3 border-t border-white/5">
-                    <h4 class="text-[9px] font-black text-red-400 tracking-widest uppercase mb-2">BU OPERASYONA AİT DETAYLI LOGLAR</h4>
-                    <div id="diveErrorLogContainer" class="space-y-1 text-[9px] font-mono text-slate-400"></div>
-                </div>
-            </div>
-
-            <!-- Tüm Uyarı ve Limit Aşım Logları -->
-            <div class="card p-5 border-red-900/30 cursor-default">
-                <div class="flex justify-between items-center mb-4 border-b border-white/5 pb-2">
-                    <h3 class="text-[11px] font-black text-red-400 tracking-widest uppercase">TÜM ARIZA & LİMİT KAYITLARI</h3>
-                    <button onclick="clearErrorLogs()" class="text-[9px] text-slate-500 hover:text-white uppercase font-bold">Temizle</button>
-                </div>
-                <div id="errorLogContainer" class="space-y-2 max-h-48 overflow-y-auto pr-1 text-[10px] font-mono">
-                    <p class="text-slate-500 italic text-center py-2">Sistem normal. Uyarı yok.</p>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <!-- SENSÖR LİMİT AYARLAMA EKRANI -->
-    <div id="limit-modal" style="display: none;" class="fixed inset-0 modal-bg z-[100] flex items-center justify-center p-5">
-        <div class="bg-slate-900 w-full max-w-sm rounded-3xl border border-sky-500/30 shadow-2xl overflow-hidden">
-            <div class="p-4 bg-sky-900/20 border-b border-white/5 flex justify-between items-center">
-                <h3 id="limitModalTitle" class="font-black text-[11px] text-sky-400 tracking-widest uppercase">LİMİT AYARLA</h3>
-                <button onclick="closeLimitModal()" class="text-slate-400"><i class="fa-solid fa-xmark text-xl"></i></button>
-            </div>
-            <div class="p-6 space-y-4">
-                <div>
-                    <label class="block text-[9px] text-slate-400 font-bold uppercase mb-1">Minimum Uyarı Değeri</label>
-                    <input type="number" id="limitMin" step="0.1" placeholder="Alt Limit">
-                </div>
-                <div>
-                    <label class="block text-[9px] text-slate-400 font-bold uppercase mb-1">Maksimum Uyarı Değeri</label>
-                    <input type="number" id="limitMax" step="0.1" placeholder="Üst Limit">
-                </div>
-                <input type="hidden" id="limitSensorKey">
-            </div>
-            <div class="p-4 bg-black/40 flex gap-3">
-                <button onclick="closeLimitModal()" class="flex-1 bg-slate-800 text-white py-2 rounded-xl text-[10px] font-black uppercase">İptal</button>
-                <button onclick="saveLimit()" class="flex-1 bg-sky-600 text-white py-2 rounded-xl text-[10px] font-black uppercase">Kaydet</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- JAVASCRIPT KODLARI -->
-    <script>
-        // DOM Seçici Kısayolu
-        const $ = id => document.getElementById(id);
-
-        let isSystemOn = false;
-        let isDiving = false;
-        let diveStartTime = 0;
-        let currentDiveData = { timestamps: [], volt: [], basinc: [], kmpNtc: [], batNtc: [], kmpDht: [], batDht: [], suKmp: [], suBat: [] };
-        let currentDiveErrors = [];
-        
-        let diveHistory = JSON.parse(localStorage.getItem('akua_diveHistory')) || [];
-        let errorLogs = JSON.parse(localStorage.getItem('akua_errorLogs')) || [];
-        let totalRuntimeMinutes = parseInt(localStorage.getItem('akua_totalRuntime')) || 0;
-        let diveCheckInterval = null;
-
-        // Harici Donanım Modüllerinin Durumları
-        let activeModules = JSON.parse(localStorage.getItem('akua_activeModules')) || {
-            depth: false,
-            co: false,
-            bio: false,
-            gps: false
-        };
-
-        // Varsayılan Limit Tanımlamaları
-        let limits = JSON.parse(localStorage.getItem('akua_limits')) || {
-            voltaj: { min: 10.5, max: 14.4 },
-            basinc: { min: 40, max: 120 },
-            kmpDhtIsi: { min: -10, max: 60 },
-            kmpNem: { min: 0, max: 90 },
-            kmpNtc: { min: -10, max: 80 },
-            batDhtIsi: { min: -10, max: 50 },
-            batNem: { min: 0, max: 90 },
-            batNtc: { min: -10, max: 60 },
-            egim: { min: 0, max: 70 },
-            depth: { min: 0, max: 40 },
-            co: { min: 0, max: 10 },
-            pulse: { min: 50, max: 130 }
-        };
-
-        let activeAlarms = new Set();
-        let alarmLoopInterval = null;
-        let myChart = null;
-
-        // BLE Veri Parser Simülasyonu
-        function processBLEData(rawData) {
-            let data = {};
-            if(!rawData) {
-                // Stabilize edilip dalgalanan sensör verileri
-                data = {
-                    mod: isSystemOn ? "ACIK" : "KAPALI",
-                    volt: isSystemOn ? (12.3 + Math.sin(Date.now()/30000)*0.5).toFixed(1) : "0.0",
-                    basinc: isSystemOn ? Math.floor(48 + Math.sin(Date.now()/4000)*3) : 0,
-                    kmpDhtIsi: isSystemOn ? Math.floor(33 + Math.sin(Date.now()/12000)*2) : 0,
-                    kmpNem: isSystemOn ? 41 : 0,
-                    kmpNtc: isSystemOn ? Math.floor(55 + Math.random()*2) : 0,
-                    batDhtIsi: isSystemOn ? 28 : 0,
-                    batNem: isSystemOn ? 36 : 0,
-                    batNtc: isSystemOn ? Math.floor(33 + Math.random()*1) : 0,
-                    egim: isSystemOn ? Math.floor(Math.abs(Math.sin(Date.now()/8000)*15)) : 0,
-                    kmpSu: "YOK",
-                    batSu: "YOK",
-                    // Harici Modül Verileri
-                    depthValue: isSystemOn ? (Math.sin(Date.now()/60000)*12 + 15).toFixed(1) : "0.0",
-                    waterTempValue: isSystemOn ? "17.4" : "0.0",
-                    coValue: isSystemOn ? Math.floor(1 + Math.random()*2) : 0,
-                    pulseValue: isSystemOn ? Math.floor(74 + Math.sin(Date.now()/10000)*8) : 0,
-                    o2Value: isSystemOn ? 99 : 0
-                };
-            }
-
-            updateUI(data);
-            checkLimits(data);
-            handleDiveRecording(data);
-        }
-
-        // Arayüz Verilerini Güncelleme
-        function updateUI(data) {
-            if(data.mod === "ACIK" && !isSystemOn) { isSystemOn = true; }
-            if(data.mod === "KAPALI" && isSystemOn) { isSystemOn = false; }
-
-            let v = parseFloat(data.volt);
-            $('valVoltaj').innerText = data.volt;
-            $('valGucYuzde').innerText = Math.min(100, Math.max(0, Math.floor(((v - 11.0) / 3.4) * 100))) + "%";
-            
-            // Tahmini Çalışma Süresi Hesabı
-            if(isSystemOn && v > 10.5) {
-                let yuzde = Math.min(100, Math.max(0, ((v - 11.0) / 3.4) * 100));
-                let kalanDk = Math.floor(yuzde * 2.4);
-                $('valGucSure').innerText = `Tahmini: ${Math.floor(kalanDk / 60)} sa ${kalanDk % 60} dk`;
-            } else {
-                $('valGucSure').innerText = `Tahmini: -- sa -- dk`;
-            }
-
-            $('valBsn').innerText = data.basinc;
-            $('valLmt').innerText = `Lmt: ${limits.basinc.min} / ${limits.basinc.max} PSI`;
-            
-            $('valKmpDhtIsi').innerText = data.kmpDhtIsi;
-            $('valKmpNem').innerText = data.kmpNem;
-            $('valKmpNtc').innerText = parseFloat(data.kmpNtc).toFixed(1);
-            $('valKmpSu').innerText = data.kmpSu;
-            $('valKmpSu').className = `text-[9px] font-black tracking-widest ${data.kmpSu !== "YOK" ? 'text-red-500' : 'text-emerald-400'}`;
-
-            $('valBatDhtIsi').innerText = data.batDhtIsi;
-            $('valBatNem').innerText = data.batNem;
-            $('valBatNtc').innerText = parseFloat(data.batNtc).toFixed(1);
-            $('valBatSu').innerText = data.batSu;
-            $('valBatSu').className = `text-[9px] font-black tracking-widest ${data.batSu !== "YOK" ? 'text-red-500' : 'text-emerald-400'}`;
-
-            // Eğim / Denge Verisi & Su Terazisi Animasyonu
-            let angle = data.egim;
-            $('valDengeAci').innerText = angle + "°";
-            
-            let rad = (angle * Math.PI) / 180;
-            let maxOffset = 14; // piksellik terazi sınır kayması
-            let xOffset = Math.sin(rad) * maxOffset;
-            let yOffset = -Math.cos(rad) * (angle > 0 ? 5 : 0); // Eğim yönüne göre basit kayma simülasyonu
-            $('denge-dot').style.transform = `translate(${xOffset}px, ${yOffset}px)`;
-
-            if(angle >= limits.egim.max) {
-                $('valDengeDurum').innerText = "TEHLİKE!";
-                $('valDengeDurum').className = "text-[9px] font-black text-red-500 tracking-widest uppercase";
-            } else {
-                $('valDengeDurum').innerText = "STABİL";
-                $('valDengeDurum').className = "text-[9px] font-black text-emerald-400 tracking-widest uppercase";
-            }
-
-            // Harici Modül Atamaları
-            if(activeModules.depth) {
-                $('valDerinlik').innerText = data.depthValue;
-                $('valSuIsi').innerText = data.waterTempValue;
-            }
-            if(activeModules.co) {
-                $('valCO').innerText = data.coValue;
-            }
-            if(activeModules.bio) {
-                $('valPulse').innerText = data.pulseValue;
-                $('valO2').innerText = data.o2Value;
-            }
-        }
-
-        // Limit Aşımı & Hata Kontrolleri
-        function checkLimits(data) {
-            if(!isSystemOn) return;
-            activeAlarms.clear();
-
-            const check = (val, key, cardId, name) => {
-                let v = parseFloat(val);
-                if(v < limits[key].min || v > limits[key].max) {
-                    activeAlarms.add(cardId);
-                    logError(`LİMİT AŞIMI: ${name} (${v} / Lmt: ${limits[key].min}-${limits[key].max})`);
-                }
-            };
-
-            check(data.volt, 'voltaj', 'card-voltaj', 'Batarya Voltajı');
-            check(data.basinc, 'basinc', 'card-basinc', 'Basınç');
-            check(data.kmpDhtIsi, 'kmpDhtIsi', 'card-kmpDhtIsi', 'Komp DHT Isı');
-            check(data.kmpNem, 'kmpNem', 'card-kmpNem', 'Komp Nem');
-            check(data.kmpNtc, 'kmpNtc', 'card-kmpNtc', 'Komp NTC');
-            check(data.batDhtIsi, 'batDhtIsi', 'card-batDhtIsi', 'Bat DHT Isı');
-            check(data.batNem, 'batNem', 'card-batNem', 'Bat Nem');
-            check(data.batNtc, 'batNtc', 'card-batNtc', 'Bat NTC');
-            check(data.egim, 'egim', 'card-denge', 'Eğim Derecesi');
-            
-            if(activeModules.depth) {
-                check(data.depthValue, 'depth', 'card-depth', 'Dış Derinlik');
-            }
-            if(activeModules.co) {
-                check(data.coValue, 'co', 'card-co', 'Karbonmonoksit Oranı');
-            }
-            if(activeModules.bio) {
-                check(data.pulseValue, 'pulse', 'card-bio', 'Nabız Seviyesi');
-            }
-
-            if(data.kmpSu !== "YOK") { activeAlarms.add('card-kmpSu'); logError('SU ALARMI: Kompresör Hücresi Islak!'); }
-            if(data.batSu !== "YOK") { activeAlarms.add('card-batSu'); logError('SU ALARMI: Batarya Hücresi Islak!'); }
-
-            // Alarm Flaşör Animasyonu
-            document.querySelectorAll('.card, [id^="card-"]').forEach(el => el.classList.remove('alarm-active'));
-            activeAlarms.forEach(id => {
-                let el = $(id);
-                if(el) el.classList.add('alarm-active');
-            });
-
-            // 5 Saniyede Bir Tetiklenen Titreşim ve Buzzer Döngüsü
-            if(activeAlarms.size > 0) {
-                if(!alarmLoopInterval) {
-                    triggerAlarmHardware();
-                    alarmLoopInterval = setInterval(triggerAlarmHardware, 5000);
-                }
-            } else {
-                if(alarmLoopInterval) { clearInterval(alarmLoopInterval); alarmLoopInterval = null; }
-            }
-        }
-
-        function triggerAlarmHardware() {
-            if(navigator.vibrate) navigator.vibrate(1000); // Mobil cihaz titrer
-            sendCommand("T_BUZ"); // Buzzer çaldır
-            sendCommand("T_VIB"); // Titreşim motorunu çaldır
-        }
-
-        // Görev Süresi ve Akıllı Dalış/Test Algoritması
-        function handleDiveRecording(data) {
-            if(isSystemOn && !isDiving) {
-                isDiving = true;
-                diveStartTime = Date.now();
-                currentDiveData = { timestamps: [], volt: [], basinc: [], kmpNtc: [], batNtc: [], kmpDht: [], batDht: [], suKmp: [], suBat: [] };
-                currentDiveErrors = [];
-                
-                if(!diveCheckInterval) {
-                    diveCheckInterval = setInterval(() => {
-                        totalRuntimeMinutes++;
-                        localStorage.setItem('akua_totalRuntime', totalRuntimeMinutes);
-                        renderTotalRuntime();
-                    }, 60000);
-                }
-            } 
-            else if (isSystemOn && isDiving) {
-                let elapsedSec = Math.floor((Date.now() - diveStartTime) / 1000);
-                if(elapsedSec % 3 === 0) { // 3 saniyede bir örnekleme al
-                    currentDiveData.timestamps.push(elapsedSec + "sn");
-                    currentDiveData.volt.push(parseFloat(data.volt));
-                    currentDiveData.basinc.push(parseInt(data.basinc));
-                    currentDiveData.kmpNtc.push(parseFloat(data.kmpNtc).toFixed(1));
-                    currentDiveData.batNtc.push(parseFloat(data.batNtc).toFixed(1));
-                    currentDiveData.kmpDht.push(parseInt(data.kmpDhtIsi));
-                    currentDiveData.batDht.push(parseInt(data.batDhtIsi));
-                    currentDiveData.suKmp.push(data.kmpSu === "YOK" ? 0 : 1);
-                    currentDiveData.suBat.push(data.batSu === "YOK" ? 0 : 1);
-                }
-            }
-            else if (!isSystemOn && isDiving) {
-                isDiving = false;
-                if(diveCheckInterval) { clearInterval(diveCheckInterval); diveCheckInterval = null; }
-                
-                let durationMs = Date.now() - diveStartTime;
-                let durationMin = Math.floor(durationMs / 60000);
-                let durationSec = Math.floor((durationMs % 60000) / 1000);
-                
-                // 2 dakikadan uzun süren çalışmalar "DALIŞ", daha kısa işlemler "TEST" kaydedilir
-                let recordType = durationMs >= 120000 ? "DALIŞ" : "TEST";
-                
-                let newRecord = {
-                    id: Date.now(),
-                    type: recordType,
-                    date: new Date().toLocaleString('tr-TR'),
-                    durationText: `${durationMin} dk ${durationSec} sn`,
-                    data: JSON.parse(JSON.stringify(currentDiveData)),
-                    errors: [...currentDiveErrors]
-                };
-
-                diveHistory.unshift(newRecord);
-                if(diveHistory.length > 10) diveHistory.pop();
-                
-                localStorage.setItem('akua_diveHistory', JSON.stringify(diveHistory));
-                renderDiveHistory();
-            }
-        }
-
-        // Hata & Limit Aşım Loglama Altyapısı
-        function logError(msg) {
-            let tStr = new Date().toLocaleTimeString('tr-TR', {hour12: false});
-            let dStr = new Date().toLocaleDateString('tr-TR');
-            let logMsg = `[${dStr} ${tStr}] ${msg}`;
-            
-            if(errorLogs.length > 0 && errorLogs[0].includes(msg)) return; 
-            
-            errorLogs.unshift(logMsg);
-            if(errorLogs.length > 30) errorLogs.pop();
-            localStorage.setItem('akua_errorLogs', JSON.stringify(errorLogs));
-            
-            if(isDiving) { currentDiveErrors.push(`[${tStr}] ${msg}`); }
-            if($('view-logs').style.display === 'block') { renderErrorLogs(); }
-        }
-
-        // Render ve Arayüz Güncellemeleri
-        function renderTotalRuntime() {
-            let hours = Math.floor(totalRuntimeMinutes / 60);
-            let mins = totalRuntimeMinutes % 60;
-            $('valTotalRuntime').innerText = `${hours} sa ${mins} dk`;
-        }
-
-        function resetTotalRuntime() {
-            totalRuntimeMinutes = 0;
-            localStorage.setItem('akua_totalRuntime', 0);
-            renderTotalRuntime();
-            showMsg("Sıfırlandı", "Toplam çalışma saati başarıyla sıfırlandı.");
-        }
-
-        function renderErrorLogs() {
-            let cont = $('errorLogContainer');
-            cont.innerHTML = '';
-            if(errorLogs.length === 0) {
-                cont.innerHTML = '<p class="text-slate-500 italic text-center py-2">Sistem normal. Uyarı yok.</p>';
-                return;
-            }
-            errorLogs.forEach(log => {
-                let div = document.createElement('div');
-                div.className = "py-1 border-b border-white/5 text-red-400";
-                div.innerText = log;
-                cont.appendChild(div);
-            });
-        }
-
-        function clearErrorLogs() {
-            errorLogs = [];
-            localStorage.setItem('akua_errorLogs', JSON.stringify(errorLogs));
-            renderErrorLogs();
-        }
-
-        function renderDiveHistory() {
-            let cont = $('diveListContainer');
-            cont.innerHTML = '';
-            if(diveHistory.length === 0) {
-                cont.innerHTML = '<p class="text-[10px] text-slate-500 italic text-center py-4">Kayıt bulunamadı.</p>';
-                return;
-            }
-
-            diveHistory.forEach(record => {
-                let div = document.createElement('div');
-                div.className = "bg-black/30 p-3 rounded-lg border border-white/5 flex justify-between items-center cursor-pointer active:bg-slate-800 transition";
-                div.onclick = () => openChart(record);
-                let colorClass = record.type === "DALIŞ" ? "text-sky-400" : "text-slate-400";
-                
-                div.innerHTML = `
-                    <div>
-                        <span class="block text-[11px] font-black ${colorClass}">${record.type}</span>
-                        <span class="text-[9px] text-slate-500">${record.date}</span>
-                    </div>
-                    <div class="text-right">
-                        <span class="block text-[11px] font-bold text-white"><i class="fa-regular fa-clock text-slate-500 mr-1"></i> ${record.durationText}</span>
-                    </div>
-                `;
-                cont.appendChild(div);
-            });
-        }
-
-        // Grafik Çizim ve Detaylandırma
-        function openChart(record) {
-            $('diveChartCard').style.display = 'block';
-            $('chartTitle').innerText = `${record.type} ANALİZİ (${record.durationText})`;
-
-            let errCont = $('diveErrorLogContainer');
-            errCont.innerHTML = '';
-            if(!record.errors || record.errors.length === 0) {
-                errCont.innerHTML = '<p class="text-emerald-400 italic text-center py-2">Bu operasyon boyunca hiçbir limit aşımı veya arıza tespit edilmedi.</p>';
-            } else {
-                record.errors.forEach(err => {
-                    let p = document.createElement('p');
-                    p.className = "text-red-400 border-b border-white/5 py-0.5";
-                    p.innerText = err;
-                    errCont.appendChild(p);
-                });
-            }
-
-            const ctx = $('sensorChart').getContext('2d');
-            if(myChart) myChart.destroy();
-
-            myChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: record.data.timestamps,
-                    datasets: [
-                        { label: 'Voltaj (V)', data: record.data.volt, borderColor: '#10b981', borderWidth: 2, tension: 0.2, pointRadius: 0, yAxisID: 'yVolt' },
-                        { label: 'Basınç (PSI)', data: record.data.basinc, borderColor: '#0ea5e9', borderWidth: 2, tension: 0.2, pointRadius: 0, yAxisID: 'yPsi' },
-                        { label: 'Kmp NTC (°C)', data: record.data.kmpNtc, borderColor: '#f59e0b', borderWidth: 2, tension: 0.2, pointRadius: 0, yAxisID: 'yTemp' },
-                        { label: 'Bat NTC (°C)', data: record.data.batNtc, borderColor: '#ef4444', borderWidth: 2, tension: 0.2, pointRadius: 0, yAxisID: 'yTemp' }
-                    ]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    interaction: { mode: 'index', intersect: false },
-                    plugins: { legend: { labels: { color: '#94a3b8', boxWidth: 8, font: {size: 8} } } },
-                    scales: {
-                        x: { display: false },
-                        yVolt: { type: 'linear', display: true, position: 'left', ticks: { color: '#10b981', font:{size:8} }, grid:{drawOnChartArea:false} },
-                        yPsi: { type: 'linear', display: true, position: 'right', ticks: { color: '#0ea5e9', font:{size:8} }, grid:{drawOnChartArea:false} },
-                        yTemp: { type: 'linear', display: true, position: 'left', ticks: { color: '#f59e0b', font:{size:8} }, grid:{color:'#1e293b'} }
-                    }
-                }
-            });
-            $('view-logs').scrollTo({ top: 300, behavior: 'smooth' });
-        }
-
-        function closeChart() { $('diveChartCard').style.display = 'none'; }
-
-        // Sekmeler Arası Geçiş
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab-btn').forEach(btn => { btn.classList.remove('active'); btn.classList.add('text-slate-500'); });
-            document.querySelectorAll('main > div[id^="view-"]').forEach(view => view.style.display = 'none');
-            
-            $('tab-' + tabId).classList.add('active');
-            $('tab-' + tabId).classList.remove('text-slate-500');
-            $('view-' + tabId).style.display = 'block';
-
-            if(tabId === 'logs') { renderDiveHistory(); renderErrorLogs(); }
-            if(tabId === 'controls') { 
-                renderTotalRuntime(); 
-                // Input değerlerini güncel limitlerle eşitle
-                $('input-press-min').value = limits.basinc.min;
-                $('input-press-max').value = limits.basinc.max;
-            }
-        }
-
-        // Donanım Modüllerini Aç/Kapat ve Kaydet
-        function openModuleModal() { $('module-modal').style.display = 'flex'; }
-        function closeModuleModal() { $('module-modal').style.display = 'none'; }
-
-        function updateModules() {
-            activeModules.depth = $('mod-depth').checked;
-            activeModules.co = $('mod-co').checked;
-            activeModules.bio = $('mod-bio').checked;
-            activeModules.gps = $('mod-gps').checked;
-
-            localStorage.setItem('akua_activeModules', JSON.stringify(activeModules));
-            applyModuleVisibility();
-        }
-
-        function applyModuleVisibility() {
-            $('mod-depth').checked = activeModules.depth;
-            $('mod-co').checked = activeModules.co;
-            $('mod-bio').checked = activeModules.bio;
-            $('mod-gps').checked = activeModules.gps;
-
-            $('wrapper-depth').style.display = activeModules.depth ? 'grid' : 'none';
-            $('card-co').style.display = activeModules.co ? 'block' : 'none';
-            $('card-bio').style.display = activeModules.bio ? 'block' : 'none';
-            $('card-gps').style.display = activeModules.gps ? 'block' : 'none';
-        }
-
-        // Hava Basıncı Limitlerini Kaydetme Fonksiyonu (Kontrol Sekmesinden)
-        function savePressureLimit(type) {
-            let val;
-            if(type === 'min') {
-                val = parseFloat($('input-press-min').value);
-                limits.basinc.min = val;
-            } else {
-                val = parseFloat($('input-press-max').value);
-                limits.basinc.max = val;
-            }
-            localStorage.setItem('akua_limits', JSON.stringify(limits));
-            showMsg("Limit Güncellendi", `Basınç ${type === 'min' ? 'alt' : 'üst'} limiti ${val} PSI olarak ayarlandı.`);
-        }
-
-        // Limit Belirleme Ekranı (Operasyon Sekmesinden Tıklanınca Açılan Modal)
-        function openLimitModal(sensorKey, title) {
-            $('limitSensorKey').value = sensorKey;
-            $('limitModalTitle').innerText = title + " LİMİTİ";
-            $('limitMin').value = limits[sensorKey].min;
-            $('limitMax').value = limits[sensorKey].max;
-            $('limit-modal').style.display = 'flex';
-        }
-
-        function closeLimitModal() { $('limit-modal').style.display = 'none'; }
-
-        // Operasyon sekmesinden limit ayarlama işlemi
-        function saveLimit() {
-            let key = $('limitSensorKey').value;
-            let min = parseFloat($('limitMin').value);
-            let max = parseFloat($('limitMax').value);
-            
-            limits[key] = { min: min, max: max };
-            localStorage.setItem('akua_limits', JSON.stringify(limits));
-            closeLimitModal();
-            showMsg("Limit Kaydedildi", key.toUpperCase() + " sınır değerleri kaydedildi.");
-        }
-
-        // Servis Erişimi Bölümünü Aç/Kapat
-        function toggleServiceAccess() {
-            let panel = $('service-access-panel');
-            let header = $('service-access-header');
-            if (panel.style.display === 'none') {
-                panel.style.display = 'block';
-                header.innerText = "SERVİS ERİŞİMİNİ GİZLE";
-            } else {
-                panel.style.display = 'none';
-                header.innerText = "SERVİS ERİŞİSİMİ";
-            }
-        }
-
-        // Genel Uyarı/Bilgi Balonu
-        function showMsg(title, text) {
-            let msgBox = $('msg-box');
-            $('msg-title').innerText = title;
-            $('msg-text').innerText = text;
-            msgBox.classList.remove('opacity-0', 'pointer-events-none');
-            setTimeout(() => { msgBox.classList.add('opacity-0', 'pointer-events-none'); }, 3000);
-        }
-
-        function sendCommand(cmd) {
-            showMsg("Sinyal İletildi", cmd);
-            if(cmd === "MOD_TOGGLE") {
-                isSystemOn = !isSystemOn;
-            }
-        }
-
-        // Canlı veri simülatörünün saniyede bir tetiklenmesi
-        setInterval(() => { processBLEData(null); }, 2000); 
-
-        // Başlangıç Kurulumu
-        renderTotalRuntime();
-        applyModuleVisibility();
-    </script>
-</body>
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#020617">
+    <title>Akua Dive S3 Modular OS</title>
+    
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M15 85C25 65 35 40 50 15C65 40 75 65 85 85H68C65 75 62 68 58 62C55 58 52 56 48 58C44 60 41 68 38 85H15Z' fill='%233b82f6'/></svg>">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;600;800&display=swap');
+
+        :root { --akua-blue: #0ea5e9; --akua-danger: #ef4444; }
+        body { background-color: #020617; color: #f8fafc; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; user-select: none; }
+        h1, .tactical-font { font-family: 'Orbitron', sans-serif; }
+        
+        .card { background-color: #0f172a; border-radius: 1.25rem; border: 1px solid #1e293b; transition: all 0.3s ease; overflow: hidden; cursor: pointer; }
+        .card:active { transform: scale(0.98); }
+        
+        @keyframes alert-pulse { 
+            0%, 100% { background-color: #0f172a; border-color: #1e293b; } 
+            50% { background-color: #450a0a; border-color: #ef4444; box-shadow: 0 0 20px rgba(239, 68, 68, 0.4); } 
+        }
+        .alarm-active { animation: alert-pulse 1s infinite !important; }
+
+        .glass-header { background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(20px); border-bottom: 1px solid #1e293b; }
+        .tab-btn.active { color: var(--akua-blue); border-bottom: 3px solid var(--akua-blue); font-weight: 800; }
+        
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .modal-bg { background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); }
+        
+        input[type="number"] { background: #090d16; border: 1px solid #1e293b; color: white; border-radius: 12px; padding: 10px; width: 100%; outline: none; text-align: center; font-weight: bold;}
+        input[type="number"]:focus { border-color: #0ea5e9; }
+
+        /* Fab Button CSS (Modül Ekleme Butonu) */
+        .fab-btn { position: fixed; bottom: 24px; right: 24px; width: 56px; height: 56px; background-color: #0ea5e9; border-radius: 50%; box-shadow: 0 4px 20px rgba(14, 165, 233, 0.5); display: flex; align-items: center; justify-content: center; font-size: 24px; color: white; z-index: 90; transition: transform 0.2s; cursor: pointer; }
+        .fab-btn:active { transform: scale(0.9); }
+        .module-checkbox { accent-color: #0ea5e9; width: 18px; height: 18px; cursor: pointer; }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden">
+
+    <!-- HEADER -->
+    <header class="glass-header z-50 p-4 sticky top-0 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+            <div style="width: 38px; height: 38px; filter: drop-shadow(0 0 8px rgba(14, 165, 233, 0.4));">
+                <svg width="38" height="38" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M15 85C25 65 35 40 50 15C65 40 75 65 85 85H68C65 75 62 68 58 62C55 58 52 56 48 58C44 60 41 68 38 85H15Z" fill="url(#logoGradient)" />
+                    <defs>
+                        <linearGradient id="logoGradient" x1="50" y1="15" x2="50" y2="85" gradientUnits="userSpaceOnUse">
+                            <stop stop-color="#38bdf8" />
+                            <stop offset="1" stop-color="#0ea5e9" />
+                        </linearGradient>
+                    </defs>
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-lg font-black tracking-tighter leading-none text-white">AKUA DIVE</h1>
+                <p class="text-[9px] text-sky-400 font-bold tracking-[0.3em] uppercase mt-1">LOG OS v7.3</p>
+            </div>
+        </div>
+        <button id="btnConnect" class="bg-slate-800 text-white px-5 py-2.5 rounded-full font-black text-[10px] border border-slate-700 flex items-center gap-2 active:scale-95 transition-all">
+            <i class="fa-brands fa-bluetooth-b text-sky-400"></i> <span id="connectText">BAĞLAN</span>
+        </button>
+    </header>
+
+    <!-- BİLGİ/ALARM MESAJ BARBARI -->
+    <div id="msg-box" class="fixed top-24 left-1/2 -translate-x-1/2 bg-slate-900 border border-sky-500/30 text-white px-6 py-4 rounded-3xl shadow-2xl z-[100] flex items-center gap-4 opacity-0 pointer-events-none transition-all duration-300">
+        <div class="p-2 rounded-full bg-sky-500/10"><i class="fa-solid fa-circle-info text-sky-400"></i></div>
+        <div>
+            <h4 id="msg-title" class="font-black text-[10px] uppercase tracking-widest"></h4>
+            <p id="msg-text" class="text-[10px] text-slate-400"></p>
+        </div>
+    </div>
+
+    <!-- MODULE MANAGER MODAL (MODÜL EKLEME PANELİ) -->
+    <div id="module-modal" style="display: none;" class="fixed inset-0 bg-black/95 z-[120] flex items-center justify-center p-5 backdrop-blur-2xl">
+        <div class="bg-slate-900 w-full max-w-lg rounded-[2.5rem] border border-sky-500/20 overflow-hidden shadow-2xl flex flex-col">
+            <div class="p-6 border-b border-white/5 flex justify-between items-center bg-sky-500/5">
+                <div class="flex items-center gap-3">
+                    <i class="fa-solid fa-layer-group text-sky-400 text-xl"></i>
+                    <h3 class="font-black text-[11px] tracking-[0.2em] text-sky-400 uppercase">Donanım Modülleri</h3>
+                </div>
+                <button onclick="closeModuleModal()" class="text-slate-500 hover:text-white"><i class="fa-solid fa-circle-xmark text-3xl"></i></button>
+            </div>
+            <div class="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+                <p class="text-[10px] text-slate-400 mb-4">AKUA Dive'a bağladığınız harici donanımları aktif edin.</p>
+                <label class="flex items-center gap-4 p-4 bg-slate-800/50 rounded-xl border border-white/5 cursor-pointer">
+                    <input type="checkbox" id="mod-depth" class="module-checkbox" onchange="updateModules()">
+                    <div><span class="block text-xs font-black text-white">Derinlik & Dış Basınç Profili</span></div>
+                </label>
+                <label class="flex items-center gap-4 p-4 bg-slate-800/50 rounded-xl border border-white/5 cursor-pointer">
+                    <input type="checkbox" id="mod-co" class="module-checkbox" onchange="updateModules()">
+                    <div><span class="block text-xs font-black text-white">Karbonmonoksit (CO) Analizörü</span></div>
+                </label>
+                <label class="flex items-center gap-4 p-4 bg-slate-800/50 rounded-xl border border-white/5 cursor-pointer">
+                    <input type="checkbox" id="mod-bio" class="module-checkbox" onchange="updateModules()">
+                    <div><span class="block text-xs font-black text-white">Dalgıç Biyometrik (Nabız & O2)</span></div>
+                </label>
+                <label class="flex items-center gap-4 p-4 bg-slate-800/50 rounded-xl border border-white/5 cursor-pointer">
+                    <input type="checkbox" id="mod-gps" class="module-checkbox" onchange="updateModules()">
+                    <div><span class="block text-xs font-black text-white">Uydu Konum (GPS) Modülü</span></div>
+                </label>
+            </div>
+            <div class="p-4 bg-black/40 border-t border-white/5">
+                <button onclick="closeModuleModal()" class="w-full bg-sky-600 text-white font-black text-[11px] tracking-widest py-3 rounded-xl">KAYDET VE KAPAT</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modül Ekleme (FAB) Butonu -->
+    <button onclick="openModuleModal()" class="fab-btn"><i class="fa-solid fa-plus"></i></button>
+
+    <main class="flex-1 overflow-y-auto p-4 pb-32">
+        <!-- SEKMELER -->
+        <div class="flex gap-4 border-b border-white/5 mb-5 overflow-x-auto pb-2 scrollbar-hide whitespace-nowrap">
+            <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-btn active pb-2 text-[10px] font-black uppercase tracking-[0.1em] transition-all">OPERASYON</button>
+            <button onclick="switchTab('controls')" id="tab-controls" class="tab-btn pb-2 text-[10px] font-black uppercase tracking-[0.1em] transition-all text-slate-500">KONTROL</button>
+            <button onclick="switchTab('logs')" id="tab-logs" class="tab-btn pb-2 text-[10px] font-black uppercase tracking-[0.1em] transition-all text-slate-500">KAYITLAR</button>
+        </div>
+
+        <!-- 1. OPERASYON SEKMESİ -->
+        <div id="view-dashboard" class="space-y-4">
+            
+            <!-- GÜÇ VE BASINÇ -->
+            <div class="grid grid-cols-2 gap-3">
+                <div id="card-voltaj" class="card p-5 flex flex-col items-center justify-center animate-none" onclick="openLimitModal('voltaj', 'Batarya Voltajı (V)')">
+                    <span class="text-[10px] text-slate-500 font-black mb-1 tracking-widest uppercase text-center">BATARYA SEVİYESİ</span>
+                    <div class="flex items-end gap-1">
+                        <span id="valGucYuzde" class="text-4xl font-black text-emerald-400">--%</span>
+                    </div>
+                    <span class="text-[11px] text-emerald-500 font-bold mt-1">( <span id="valVoltaj">--</span> V )</span>
+                    <span id="valGucSure" class="text-[9px] text-emerald-600 font-black mt-2 tracking-widest lowercase">Tahmini: -- sa -- dk</span>
+                </div>
+                
+                <div id="card-basinc" class="card p-5 flex flex-col items-center justify-center relative animate-none" onclick="openLimitModal('basinc', 'Sistem Basıncı (PSI)')">
+                    <span class="text-[10px] text-slate-500 font-black mb-1 tracking-widest uppercase text-center">KUTU BASINCI</span>
+                    <span id="valBsn" class="text-4xl font-black text-sky-400">--</span>
+                    <span class="text-[10px] text-sky-500/70 font-black tracking-widest mt-1">PSI</span>
+                    <span id="valLmt" class="text-[9px] text-sky-500/70 font-black tracking-widest mt-2 bg-sky-900/30 px-2 py-0.5 rounded">Lmt: -- / --</span>
+                </div>
+            </div>
+
+            <!-- DİNAMİK DERİNLİK MODÜLÜ (MODÜL AYARLARINA GÖRE GÖZÜKÜR) -->
+            <div id="wrapper-depth" style="display: none;" class="grid grid-cols-2 gap-3">
+                <div id="card-depth" class="card p-4 flex flex-col items-center justify-center bg-blue-950/20 border-blue-500/30" onclick="openLimitModal('depth', 'Derinlik (MT)')">
+                    <span class="text-[9px] text-blue-400 font-black mb-1 tracking-widest uppercase">DERİNLİK</span>
+                    <div class="flex items-baseline gap-0.5">
+                        <span id="valDerinlik" class="text-3xl font-black text-white">0.0</span>
+                        <span class="text-[10px] font-bold text-blue-400">MT</span>
+                    </div>
+                </div>
+                <div id="card-watertemp" class="card p-4 flex flex-col items-center justify-center bg-cyan-950/20 border-cyan-500/30" onclick="openLimitModal('waterTemp', 'Su Sıcaklığı (°C)')">
+                    <span class="text-[9px] text-cyan-400 font-black mb-1 tracking-widest uppercase">SU TEMPERATURE</span>
+                    <div class="flex items-baseline gap-0.5">
+                        <span id="valSuIsi" class="text-3xl font-black text-white">18.5</span>
+                        <span class="text-[10px] font-bold text-cyan-400">°C</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SENSÖR GRUPLARI -->
+            <div class="space-y-3">
+                <!-- KOMPRESÖR GRUBU -->
+                <div class="card p-4 bg-slate-900/80 border-slate-700 cursor-default">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-[10px] font-black text-slate-400 tracking-widest uppercase"><i class="fa-solid fa-microchip text-sky-500 mr-1"></i> KOMPRESÖR GRUBU</h3>
+                    </div>
+                    <div class="grid grid-cols-4 gap-2 text-center">
+                        <div id="card-kmpDhtIsi" class="bg-black/40 p-2 rounded-lg border border-white/5 cursor-pointer" onclick="openLimitModal('kmpDhtIsi', 'Komp. DHT Isı (°C)')">
+                            <span class="block text-[8px] text-slate-500 font-bold uppercase mb-1">DHT Isı</span>
+                            <span id="valKmpDhtIsi" class="text-sm font-black text-white">--</span>
+                        </div>
+                        <div id="card-kmpNem" class="bg-black/40 p-2 rounded-lg border border-white/5 cursor-pointer" onclick="openLimitModal('kmpNem', 'Komp. Ortam Nemi (%)')">
+                            <span class="block text-[8px] text-slate-500 font-bold uppercase mb-1">DHT Nem</span>
+                            <span id="valKmpNem" class="text-sm font-black text-white">--</span>
+                        </div>
+                        <div id="card-kmpNtc" class="bg-black/40 p-2 rounded-lg border border-white/5 cursor-pointer" onclick="openLimitModal('kmpNtc', 'Komp. NTC Yüzey Isısı (°C)')">
+                            <span class="block text-[8px] text-slate-500 font-bold uppercase mb-1">NTC Isı</span>
+                            <span id="valKmpNtc" class="text-sm font-black text-white">--</span>
+                        </div>
+                        <div id="card-kmpSu" class="bg-black/40 p-2 rounded-lg border border-white/5 flex flex-col justify-center">
+                            <span class="block text-[7px] text-slate-500 font-bold uppercase mb-0.5 leading-tight">Su/Nem<br>Durumu</span>
+                            <span id="valKmpSu" class="text-[9px] font-black text-emerald-400 tracking-widest">YOK</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BATARYA GRUBU -->
+                <div class="card p-4 bg-slate-900/80 border-slate-700 cursor-default">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-[10px] font-black text-slate-400 tracking-widest uppercase"><i class="fa-solid fa-battery-half text-emerald-500 mr-1"></i> BATARYA GRUBU</h3>
+                    </div>
+                    <div class="grid grid-cols-4 gap-2 text-center">
+                        <div id="card-batDhtIsi" class="bg-black/40 p-2 rounded-lg border border-white/5 cursor-pointer" onclick="openLimitModal('batDhtIsi', 'Batarya DHT Isı (°C)')">
+                            <span class="block text-[8px] text-slate-500 font-bold uppercase mb-1">DHT Isı</span>
+                            <span id="valBatDhtIsi" class="text-sm font-black text-white">--</span>
+                        </div>
+                        <div id="card-batNem" class="bg-black/40 p-2 rounded-lg border border-white/5 cursor-pointer" onclick="openLimitModal('batNem', 'Batarya Ortam Nemi (%)')">
+                            <span class="block text-[8px] text-slate-500 font-bold uppercase mb-1">DHT Nem</span>
+                            <span id="valBatNem" class="text-sm font-black text-white">--</span>
+                        </div>
+                        <div id="card-batNtc" class="bg-black/40 p-2 rounded-lg border border-white/5 cursor-pointer" onclick="openLimitModal('batNtc', 'Batarya NTC Yüzey Isısı (°C)')">
+                            <span class="block text-[8px] text-slate-500 font-bold uppercase mb-1">NTC Isı</span>
+                            <span id="valBatNtc" class="text-sm font-black text-white">--</span>
+                        </div>
+                        <div id="card-batSu" class="bg-black/40 p-2 rounded-lg border border-white/5 flex flex-col justify-center">
+                            <span class="block text-[7px] text-slate-500 font-bold uppercase mb-0.5 leading-tight">Su/Nem<br>Durumu</span>
+                            <span id="valBatSu" class="text-[9px] font-black text-emerald-400 tracking-widest">YOK</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DİNAMİK MODÜLLER (CO VE BİYOMETRİ) -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div id="card-co" style="display: none;" class="card p-4 bg-orange-950/10 border-orange-500/20" onclick="openLimitModal('co', 'CO Seviyesi (PPM)')">
+                        <span class="block text-[8px] text-orange-400 font-black mb-1 tracking-widest uppercase text-center"><i class="fa-solid fa-triangle-exclamation mr-1"></i> CO SEVİYESİ</span>
+                        <div class="text-center">
+                            <span id="valCO" class="text-2xl font-black text-white">0</span>
+                            <span class="text-[10px] font-bold text-orange-400">PPM</span>
+                        </div>
+                    </div>
+                    <div id="card-bio" style="display: none;" class="card p-4 bg-red-950/10 border-red-500/20" onclick="openLimitModal('pulse', 'Kalp Atışı (BPM)')">
+                        <span class="block text-[8px] text-red-400 font-black mb-1 tracking-widest uppercase text-center"><i class="fa-solid fa-heartbeat mr-1"></i> BİYOMETRİK</span>
+                        <div class="text-center space-x-2">
+                            <span id="valPulse" class="text-xl font-black text-white">72</span><span class="text-[8px] text-red-400">BPM</span>
+                            <span id="valO2" class="text-xl font-black text-white">99</span><span class="text-[8px] text-red-400">%O2</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DİNAMİK GPS MODÜLÜ -->
+                <div id="card-gps" style="display: none;" class="card p-4 bg-violet-950/10 border-violet-500/20 cursor-default">
+                    <div class="flex justify-between items-center text-[8px] text-violet-400 font-black tracking-widest uppercase mb-1">
+                        <span><i class="fa-solid fa-satellite-dish mr-1"></i> GPS SATELLITE KONUMU</span>
+                        <span id="valGpsSats" class="text-white">6 SATS</span>
+                    </div>
+                    <div class="text-[10px] font-mono text-slate-300 flex justify-between">
+                        <span>LAT: <span id="valGpsLat" class="text-white font-bold">36.8123 N</span></span>
+                        <span>LON: <span id="valGpsLon" class="text-white font-bold">34.6291 E</span></span>
+                    </div>
+                </div>
+
+                <!-- SABİT DENGE DURUM KARTI (İLK HALİNDEKİ GİBİ TERAZİ SİMÜLASYONLU) -->
+                <div id="card-denge" class="card p-4 bg-slate-900/80 border-slate-700" onclick="openLimitModal('egim', 'Denge / Eğim Açısı (°)')">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="text-[10px] font-black text-slate-400 tracking-widest uppercase"><i class="fa-solid fa-compass text-amber-500 mr-1"></i> DENGE & EĞİM DURUMU</h3>
+                        <span id="valDengeDurum" class="text-[9px] font-black text-emerald-400 tracking-widest uppercase">STABİL</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-baseline gap-1">
+                            <span id="valDengeAci" class="text-3xl font-black text-white">0°</span>
+                            <span class="text-[9px] font-bold text-slate-500 uppercase">Eğim Açısı</span>
+                        </div>
+                        <!-- Mini Elektronik Su Terazisi -->
+                        <div class="w-12 h-12 rounded-full border border-slate-700 flex items-center justify-center relative bg-black/40">
+                            <div class="absolute inset-2 rounded-full border border-dashed border-slate-800"></div>
+                            <div id="denge-dot" class="w-3 h-3 rounded-full bg-emerald-500 transition-all duration-300 absolute" style="top: calc(50% - 6px); left: calc(50% - 6px);"></div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            
+            <p class="text-center text-[10px] text-slate-500 mt-4">* Limit ayarlamak için ilgili kutucuğa tıklayın.</p>
+        </div>
+
+        <!-- 2. KONTROL SEKMESİ -->
+        <div id="view-controls" style="display: none;" class="space-y-4">
+            <!-- DONANIM TESTLERİ -->
+            <div class="card p-5 cursor-default">
+                <h3 class="text-[10px] font-black text-slate-400 tracking-widest uppercase mb-4 border-b border-white/5 pb-2">DONANIM TESTLERİ</h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <button onclick="sendCommand('T_BUZ')" class="bg-slate-900/60 border border-slate-800 text-slate-300 py-4 rounded-xl flex items-center justify-center gap-2 font-black text-xs active:bg-slate-800 active:scale-95 transition-all">
+                        <i class="fa-solid fa-volume-high text-sky-400"></i>
+                        <span>SES</span>
+                    </button>
+                    <button onclick="sendCommand('T_VIB')" class="bg-slate-900/60 border border-slate-800 text-slate-300 py-4 rounded-xl flex items-center justify-center gap-2 font-black text-xs active:bg-slate-800 active:scale-95 transition-all">
+                        <span>TİTREŞİM</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- HAVA BASINCI LİMİT AYARI -->
+            <div class="card p-5 cursor-default">
+                <h3 class="text-[10px] font-black text-sky-400 tracking-widest uppercase mb-4 border-b border-white/5 pb-2">HAVA BASINCI LİMİT AYARI</h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <!-- Min Limit Ayarı -->
+                    <div class="flex items-center gap-2">
+                        <input type="number" id="input-press-min" step="0.1" class="text-center font-bold text-white outline-none">
+                        <button onclick="savePressureLimit('min')" class="bg-sky-950 border border-sky-500/30 text-sky-400 px-4 py-2.5 rounded-xl font-black text-xs active:scale-95 transition-all">OK</button>
+                    </div>
+                    <!-- Max Limit Ayarı -->
+                    <div class="flex items-center gap-2">
+                        <input type="number" id="input-press-max" step="0.1" class="text-center font-bold text-white outline-none">
+                        <button onclick="savePressureLimit('max')" class="bg-sky-950 border border-sky-500/30 text-sky-400 px-4 py-2.5 rounded-xl font-black text-xs active:scale-95 transition-all">OK</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SERVİS ERİŞİMİ SEÇENEKLERİ (Tıklanabilir Kesikli Kart) -->
+            <div id="service-access-header" onclick="toggleServiceAccess()" class="border border-dashed border-slate-700 rounded-2xl p-4 text-center text-slate-500 font-bold text-[10px] tracking-[0.2em] uppercase cursor-pointer active:scale-98 transition">
+                SERVİS ERİŞİMİ
+            </div>
+
+            <!-- Servis Paneli İçeriği -->
+            <div id="service-access-panel" style="display: none;" class="card p-5 space-y-4 cursor-default">
+                <!-- Görev Süresi Bilgisi -->
+                <div class="bg-black/40 p-4 rounded-xl border border-white/5 flex justify-between items-center">
+                    <div>
+                        <span class="block text-[10px] text-slate-400 font-bold uppercase">Toplam Görev Süresi</span>
+                        <span id="valTotalRuntime" class="text-lg font-black text-white">0 sa 0 dk</span>
+                    </div>
+                    <i class="fa-solid fa-clock-rotate-left text-2xl text-slate-600"></i>
+                </div>
+
+                <!-- Denge Sıfırlama Butonu (mpu.reset) -->
+                <button onclick="sendCommand('mpu.reset')" class="w-full bg-slate-850 border border-slate-700 text-amber-400 p-4 rounded-xl flex justify-between items-center active:bg-slate-800 transition">
+                    <span class="text-[11px] font-black uppercase tracking-widest"><i class="fa-solid fa-balance-scale mr-2 text-amber-500"></i> Denge Kalibrasyonu (Sıfırla)</span>
+                    <i class="fa-solid fa-arrows-spin text-amber-500/50"></i>
+                </button>
+
+                <!-- Görev Süresini Sıfırla -->
+                <button onclick="resetTotalRuntime()" class="w-full bg-red-900/20 border border-red-900/50 text-red-400 p-4 rounded-xl flex justify-between items-center active:bg-red-900/40 transition">
+                    <span class="text-[11px] font-black uppercase tracking-widest"><i class="fa-solid fa-trash-can mr-2"></i> Görev Süresini Sıfırla</span>
+                    <i class="fa-solid fa-rotate-left text-red-500/50"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- 3. KAYITLAR SEKMESİ -->
+        <div id="view-logs" style="display: none;" class="space-y-4">
+            <!-- Son 10 Kayıt -->
+            <div class="card p-5 cursor-default">
+                <h3 class="text-[11px] font-black text-slate-400 tracking-widest uppercase mb-4 border-b border-white/5 pb-2">Son 10 Operasyon (Dalış / Test)</h3>
+                <div id="diveListContainer" class="space-y-2 max-h-60 overflow-y-auto pr-1">
+                    <p class="text-[10px] text-slate-500 italic text-center py-4">Kayıt bulunamadı.</p>
+                </div>
+            </div>
+
+            <!-- Analiz Grafiği -->
+            <div id="diveChartCard" class="card p-3 bg-slate-900/40 cursor-default" style="display: none;">
+                <div class="flex justify-between items-center mb-2 px-1">
+                    <span id="chartTitle" class="text-[10px] font-black text-sky-400 tracking-widest uppercase"><i class="fa-solid fa-chart-area"></i> Dalış Analizi</span>
+                    <button onclick="closeChart()" class="text-slate-500 hover:text-white p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+                </div>
+                <div class="h-48 w-full"><canvas id="sensorChart"></canvas></div>
+                
+                <div class="mt-4 pt-3 border-t border-white/5">
+                    <h4 class="text-[9px] font-black text-red-400 tracking-widest uppercase mb-2">BU OPERASYONA AİT DETAYLI LOGLAR</h4>
+                    <div id="diveErrorLogContainer" class="space-y-1 text-[9px] font-mono text-slate-400"></div>
+                </div>
+            </div>
+
+            <!-- Tüm Uyarı ve Limit Aşım Logları -->
+            <div class="card p-5 border-red-900/30 cursor-default">
+                <div class="flex justify-between items-center mb-4 border-b border-white/5 pb-2">
+                    <h3 class="text-[11px] font-black text-red-400 tracking-widest uppercase">TÜM ARIZA & LİMİT KAYITLARI</h3>
+                    <button onclick="clearErrorLogs()" class="text-[9px] text-slate-500 hover:text-white uppercase font-bold">Temizle</button>
+                </div>
+                <div id="errorLogContainer" class="space-y-2 max-h-48 overflow-y-auto pr-1 text-[10px] font-mono">
+                    <p class="text-slate-500 italic text-center py-2">Sistem normal. Uyarı yok.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- SENSÖR LİMİT AYARLAMA EKRANI -->
+    <div id="limit-modal" style="display: none;" class="fixed inset-0 modal-bg z-[100] flex items-center justify-center p-5">
+        <div class="bg-slate-900 w-full max-w-sm rounded-3xl border border-sky-500/30 shadow-2xl overflow-hidden">
+            <div class="p-4 bg-sky-900/20 border-b border-white/5 flex justify-between items-center">
+                <h3 id="limitModalTitle" class="font-black text-[11px] text-sky-400 tracking-widest uppercase">LİMİT AYARLA</h3>
+                <button onclick="closeLimitModal()" class="text-slate-400"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-[9px] text-slate-400 font-bold uppercase mb-1">Minimum Uyarı Değeri</label>
+                    <input type="number" id="limitMin" step="0.1" placeholder="Alt Limit">
+                </div>
+                <div>
+                    <label class="block text-[9px] text-slate-400 font-bold uppercase mb-1">Maksimum Uyarı Değeri</label>
+                    <input type="number" id="limitMax" step="0.1" placeholder="Üst Limit">
+                </div>
+                <input type="hidden" id="limitSensorKey">
+            </div>
+            <div class="p-4 bg-black/40 flex gap-3">
+                <button onclick="closeLimitModal()" class="flex-1 bg-slate-800 text-white py-2 rounded-xl text-[10px] font-black uppercase">İptal</button>
+                <button onclick="saveLimit()" class="flex-1 bg-sky-600 text-white py-2 rounded-xl text-[10px] font-black uppercase">Kaydet</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT KODLARI -->
+    <script>
+        // DOM Seçici Kısayolu
+        const $ = id => document.getElementById(id);
+
+        let isSystemOn = false;
+        let isDiving = false;
+        let diveStartTime = 0;
+        let currentDiveData = { timestamps: [], volt: [], basinc: [], kmpNtc: [], batNtc: [], kmpDht: [], batDht: [], suKmp: [], suBat: [] };
+        let currentDiveErrors = [];
+        
+        let diveHistory = JSON.parse(localStorage.getItem('akua_diveHistory')) || [];
+        let errorLogs = JSON.parse(localStorage.getItem('akua_errorLogs')) || [];
+        let totalRuntimeMinutes = parseInt(localStorage.getItem('akua_totalRuntime')) || 0;
+        let diveCheckInterval = null;
+
+        // Harici Donanım Modüllerinin Durumları
+        let activeModules = JSON.parse(localStorage.getItem('akua_activeModules')) || {
+            depth: false,
+            co: false,
+            bio: false,
+            gps: false
+        };
+
+        // Varsayılan Limit Tanımlamaları
+        let limits = JSON.parse(localStorage.getItem('akua_limits')) || {
+            voltaj: { min: 10.5, max: 14.4 },
+            basinc: { min: 40, max: 120 },
+            kmpDhtIsi: { min: -10, max: 60 },
+            kmpNem: { min: 0, max: 90 },
+            kmpNtc: { min: -10, max: 80 },
+            batDhtIsi: { min: -10, max: 50 },
+            batNem: { min: 0, max: 90 },
+            batNtc: { min: -10, max: 60 },
+            egim: { min: 0, max: 70 },
+            depth: { min: 0, max: 40 },
+            co: { min: 0, max: 10 },
+            pulse: { min: 50, max: 130 }
+        };
+
+        let activeAlarms = new Set();
+        let alarmLoopInterval = null;
+        let myChart = null;
+
+        // BLE Veri Parser Simülasyonu
+        function processBLEData(rawData) {
+            let data = {};
+            if(!rawData) {
+                // Stabilize edilip dalgalanan sensör verileri
+                data = {
+                    mod: isSystemOn ? "ACIK" : "KAPALI",
+                    volt: isSystemOn ? (12.3 + Math.sin(Date.now()/30000)*0.5).toFixed(1) : "0.0",
+                    basinc: isSystemOn ? Math.floor(48 + Math.sin(Date.now()/4000)*3) : 0,
+                    kmpDhtIsi: isSystemOn ? Math.floor(33 + Math.sin(Date.now()/12000)*2) : 0,
+                    kmpNem: isSystemOn ? 41 : 0,
+                    kmpNtc: isSystemOn ? Math.floor(55 + Math.random()*2) : 0,
+                    batDhtIsi: isSystemOn ? 28 : 0,
+                    batNem: isSystemOn ? 36 : 0,
+                    batNtc: isSystemOn ? Math.floor(33 + Math.random()*1) : 0,
+                    egim: isSystemOn ? Math.floor(Math.abs(Math.sin(Date.now()/8000)*15)) : 0,
+                    kmpSu: "YOK",
+                    batSu: "YOK",
+                    // Harici Modül Verileri
+                    depthValue: isSystemOn ? (Math.sin(Date.now()/60000)*12 + 15).toFixed(1) : "0.0",
+                    waterTempValue: isSystemOn ? "17.4" : "0.0",
+                    coValue: isSystemOn ? Math.floor(1 + Math.random()*2) : 0,
+                    pulseValue: isSystemOn ? Math.floor(74 + Math.sin(Date.now()/10000)*8) : 0,
+                    o2Value: isSystemOn ? 99 : 0
+                };
+            }
+
+            updateUI(data);
+            checkLimits(data);
+            handleDiveRecording(data);
+        }
+
+        // Arayüz Verilerini Güncelleme
+        function updateUI(data) {
+            if(data.mod === "ACIK" && !isSystemOn) { isSystemOn = true; }
+            if(data.mod === "KAPALI" && isSystemOn) { isSystemOn = false; }
+
+            let v = parseFloat(data.volt);
+            $('valVoltaj').innerText = data.volt;
+            $('valGucYuzde').innerText = Math.min(100, Math.max(0, Math.floor(((v - 11.0) / 3.4) * 100))) + "%";
+            
+            // Tahmini Çalışma Süresi Hesabı
+            if(isSystemOn && v > 10.5) {
+                let yuzde = Math.min(100, Math.max(0, ((v - 11.0) / 3.4) * 100));
+                let kalanDk = Math.floor(yuzde * 2.4);
+                $('valGucSure').innerText = `Tahmini: ${Math.floor(kalanDk / 60)} sa ${kalanDk % 60} dk`;
+            } else {
+                $('valGucSure').innerText = `Tahmini: -- sa -- dk`;
+            }
+
+            $('valBsn').innerText = data.basinc;
+            $('valLmt').innerText = `Lmt: ${limits.basinc.min} / ${limits.basinc.max} PSI`;
+            
+            $('valKmpDhtIsi').innerText = data.kmpDhtIsi;
+            $('valKmpNem').innerText = data.kmpNem;
+            $('valKmpNtc').innerText = parseFloat(data.kmpNtc).toFixed(1);
+            $('valKmpSu').innerText = data.kmpSu;
+            $('valKmpSu').className = `text-[9px] font-black tracking-widest ${data.kmpSu !== "YOK" ? 'text-red-500' : 'text-emerald-400'}`;
+
+            $('valBatDhtIsi').innerText = data.batDhtIsi;
+            $('valBatNem').innerText = data.batNem;
+            $('valBatNtc').innerText = parseFloat(data.batNtc).toFixed(1);
+            $('valBatSu').innerText = data.batSu;
+            $('valBatSu').className = `text-[9px] font-black tracking-widest ${data.batSu !== "YOK" ? 'text-red-500' : 'text-emerald-400'}`;
+
+            // Eğim / Denge Verisi & Su Terazisi Animasyonu
+            let angle = data.egim;
+            $('valDengeAci').innerText = angle + "°";
+            
+            let rad = (angle * Math.PI) / 180;
+            let maxOffset = 14; // piksellik terazi sınır kayması
+            let xOffset = Math.sin(rad) * maxOffset;
+            let yOffset = -Math.cos(rad) * (angle > 0 ? 5 : 0); // Eğim yönüne göre basit kayma simülasyonu
+            $('denge-dot').style.transform = `translate(${xOffset}px, ${yOffset}px)`;
+
+            if(angle >= limits.egim.max) {
+                $('valDengeDurum').innerText = "TEHLİKE!";
+                $('valDengeDurum').className = "text-[9px] font-black text-red-500 tracking-widest uppercase";
+            } else {
+                $('valDengeDurum').innerText = "STABİL";
+                $('valDengeDurum').className = "text-[9px] font-black text-emerald-400 tracking-widest uppercase";
+            }
+
+            // Harici Modül Atamaları
+            if(activeModules.depth) {
+                $('valDerinlik').innerText = data.depthValue;
+                $('valSuIsi').innerText = data.waterTempValue;
+            }
+            if(activeModules.co) {
+                $('valCO').innerText = data.coValue;
+            }
+            if(activeModules.bio) {
+                $('valPulse').innerText = data.pulseValue;
+                $('valO2').innerText = data.o2Value;
+            }
+        }
+
+        // Limit Aşımı & Hata Kontrolleri
+        function checkLimits(data) {
+            if(!isSystemOn) return;
+            activeAlarms.clear();
+
+            const check = (val, key, cardId, name) => {
+                let v = parseFloat(val);
+                if(v < limits[key].min || v > limits[key].max) {
+                    activeAlarms.add(cardId);
+                    logError(`LİMİT AŞIMI: ${name} (${v} / Lmt: ${limits[key].min}-${limits[key].max})`);
+                }
+            };
+
+            check(data.volt, 'voltaj', 'card-voltaj', 'Batarya Voltajı');
+            check(data.basinc, 'basinc', 'card-basinc', 'Basınç');
+            check(data.kmpDhtIsi, 'kmpDhtIsi', 'card-kmpDhtIsi', 'Komp DHT Isı');
+            check(data.kmpNem, 'kmpNem', 'card-kmpNem', 'Komp Nem');
+            check(data.kmpNtc, 'kmpNtc', 'card-kmpNtc', 'Komp NTC');
+            check(data.batDhtIsi, 'batDhtIsi', 'card-batDhtIsi', 'Bat DHT Isı');
+            check(data.batNem, 'batNem', 'card-batNem', 'Bat Nem');
+            check(data.batNtc, 'batNtc', 'card-batNtc', 'Bat NTC');
+            check(data.egim, 'egim', 'card-denge', 'Eğim Derecesi');
+            
+            if(activeModules.depth) {
+                check(data.depthValue, 'depth', 'card-depth', 'Dış Derinlik');
+            }
+            if(activeModules.co) {
+                check(data.coValue, 'co', 'card-co', 'Karbonmonoksit Oranı');
+            }
+            if(activeModules.bio) {
+                check(data.pulseValue, 'pulse', 'card-bio', 'Nabız Seviyesi');
+            }
+
+            if(data.kmpSu !== "YOK") { activeAlarms.add('card-kmpSu'); logError('SU ALARMI: Kompresör Hücresi Islak!'); }
+            if(data.batSu !== "YOK") { activeAlarms.add('card-batSu'); logError('SU ALARMI: Batarya Hücresi Islak!'); }
+
+            // Alarm Flaşör Animasyonu
+            document.querySelectorAll('.card, [id^="card-"]').forEach(el => el.classList.remove('alarm-active'));
+            activeAlarms.forEach(id => {
+                let el = $(id);
+                if(el) el.classList.add('alarm-active');
+            });
+
+            // 5 Saniyede Bir Tetiklenen Titreşim ve Buzzer Döngüsü
+            if(activeAlarms.size > 0) {
+                if(!alarmLoopInterval) {
+                    triggerAlarmHardware();
+                    alarmLoopInterval = setInterval(triggerAlarmHardware, 5000);
+                }
+            } else {
+                if(alarmLoopInterval) { clearInterval(alarmLoopInterval); alarmLoopInterval = null; }
+            }
+        }
+
+        function triggerAlarmHardware() {
+            if(navigator.vibrate) navigator.vibrate(1000); // Mobil cihaz titrer
+            sendCommand("T_BUZ"); // Buzzer çaldır
+            sendCommand("T_VIB"); // Titreşim motorunu çaldır
+        }
+
+        // Görev Süresi ve Akıllı Dalış/Test Algoritması
+        function handleDiveRecording(data) {
+            if(isSystemOn && !isDiving) {
+                isDiving = true;
+                diveStartTime = Date.now();
+                currentDiveData = { timestamps: [], volt: [], basinc: [], kmpNtc: [], batNtc: [], kmpDht: [], batDht: [], suKmp: [], suBat: [] };
+                currentDiveErrors = [];
+                
+                if(!diveCheckInterval) {
+                    diveCheckInterval = setInterval(() => {
+                        totalRuntimeMinutes++;
+                        localStorage.setItem('akua_totalRuntime', totalRuntimeMinutes);
+                        renderTotalRuntime();
+                    }, 60000);
+                }
+            } 
+            else if (isSystemOn && isDiving) {
+                let elapsedSec = Math.floor((Date.now() - diveStartTime) / 1000);
+                if(elapsedSec % 3 === 0) { // 3 saniyede bir örnekleme al
+                    currentDiveData.timestamps.push(elapsedSec + "sn");
+                    currentDiveData.volt.push(parseFloat(data.volt));
+                    currentDiveData.basinc.push(parseInt(data.basinc));
+                    currentDiveData.kmpNtc.push(parseFloat(data.kmpNtc).toFixed(1));
+                    currentDiveData.batNtc.push(parseFloat(data.batNtc).toFixed(1));
+                    currentDiveData.kmpDht.push(parseInt(data.kmpDhtIsi));
+                    currentDiveData.batDht.push(parseInt(data.batDhtIsi));
+                    currentDiveData.suKmp.push(data.kmpSu === "YOK" ? 0 : 1);
+                    currentDiveData.suBat.push(data.batSu === "YOK" ? 0 : 1);
+                }
+            }
+            else if (!isSystemOn && isDiving) {
+                isDiving = false;
+                if(diveCheckInterval) { clearInterval(diveCheckInterval); diveCheckInterval = null; }
+                
+                let durationMs = Date.now() - diveStartTime;
+                let durationMin = Math.floor(durationMs / 60000);
+                let durationSec = Math.floor((durationMs % 60000) / 1000);
+                
+                // 2 dakikadan uzun süren çalışmalar "DALIŞ", daha kısa işlemler "TEST" kaydedilir
+                let recordType = durationMs >= 120000 ? "DALIŞ" : "TEST";
+                
+                let newRecord = {
+                    id: Date.now(),
+                    type: recordType,
+                    date: new Date().toLocaleString('tr-TR'),
+                    durationText: `${durationMin} dk ${durationSec} sn`,
+                    data: JSON.parse(JSON.stringify(currentDiveData)),
+                    errors: [...currentDiveErrors]
+                };
+
+                diveHistory.unshift(newRecord);
+                if(diveHistory.length > 10) diveHistory.pop();
+                
+                localStorage.setItem('akua_diveHistory', JSON.stringify(diveHistory));
+                renderDiveHistory();
+            }
+        }
+
+        // Hata & Limit Aşım Loglama Altyapısı
+        function logError(msg) {
+            let tStr = new Date().toLocaleTimeString('tr-TR', {hour12: false});
+            let dStr = new Date().toLocaleDateString('tr-TR');
+            let logMsg = `[${dStr} ${tStr}] ${msg}`;
+            
+            if(errorLogs.length > 0 && errorLogs[0].includes(msg)) return; 
+            
+            errorLogs.unshift(logMsg);
+            if(errorLogs.length > 30) errorLogs.pop();
+            localStorage.setItem('akua_errorLogs', JSON.stringify(errorLogs));
+            
+            if(isDiving) { currentDiveErrors.push(`[${tStr}] ${msg}`); }
+            if($('view-logs').style.display === 'block') { renderErrorLogs(); }
+        }
+
+        // Render ve Arayüz Güncellemeleri
+        function renderTotalRuntime() {
+            let hours = Math.floor(totalRuntimeMinutes / 60);
+            let mins = totalRuntimeMinutes % 60;
+            $('valTotalRuntime').innerText = `${hours} sa ${mins} dk`;
+        }
+
+        function resetTotalRuntime() {
+            totalRuntimeMinutes = 0;
+            localStorage.setItem('akua_totalRuntime', 0);
+            renderTotalRuntime();
+            showMsg("Sıfırlandı", "Toplam çalışma saati başarıyla sıfırlandı.");
+        }
+
+        function renderErrorLogs() {
+            let cont = $('errorLogContainer');
+            cont.innerHTML = '';
+            if(errorLogs.length === 0) {
+                cont.innerHTML = '<p class="text-slate-500 italic text-center py-2">Sistem normal. Uyarı yok.</p>';
+                return;
+            }
+            errorLogs.forEach(log => {
+                let div = document.createElement('div');
+                div.className = "py-1 border-b border-white/5 text-red-400";
+                div.innerText = log;
+                cont.appendChild(div);
+            });
+        }
+
+        function clearErrorLogs() {
+            errorLogs = [];
+            localStorage.setItem('akua_errorLogs', JSON.stringify(errorLogs));
+            renderErrorLogs();
+        }
+
+        function renderDiveHistory() {
+            let cont = $('diveListContainer');
+            cont.innerHTML = '';
+            if(diveHistory.length === 0) {
+                cont.innerHTML = '<p class="text-[10px] text-slate-500 italic text-center py-4">Kayıt bulunamadı.</p>';
+                return;
+            }
+
+            diveHistory.forEach(record => {
+                let div = document.createElement('div');
+                div.className = "bg-black/30 p-3 rounded-lg border border-white/5 flex justify-between items-center cursor-pointer active:bg-slate-800 transition";
+                div.onclick = () => openChart(record);
+                let colorClass = record.type === "DALIŞ" ? "text-sky-400" : "text-slate-400";
+                
+                div.innerHTML = `
+                    <div>
+                        <span class="block text-[11px] font-black ${colorClass}">${record.type}</span>
+                        <span class="text-[9px] text-slate-500">${record.date}</span>
+                    </div>
+                    <div class="text-right">
+                        <span class="block text-[11px] font-bold text-white"><i class="fa-regular fa-clock text-slate-500 mr-1"></i> ${record.durationText}</span>
+                    </div>
+                `;
+                cont.appendChild(div);
+            });
+        }
+
+        // Grafik Çizim ve Detaylandırma
+        function openChart(record) {
+            $('diveChartCard').style.display = 'block';
+            $('chartTitle').innerText = `${record.type} ANALİZİ (${record.durationText})`;
+
+            let errCont = $('diveErrorLogContainer');
+            errCont.innerHTML = '';
+            if(!record.errors || record.errors.length === 0) {
+                errCont.innerHTML = '<p class="text-emerald-400 italic text-center py-2">Bu operasyon boyunca hiçbir limit aşımı veya arıza tespit edilmedi.</p>';
+            } else {
+                record.errors.forEach(err => {
+                    let p = document.createElement('p');
+                    p.className = "text-red-400 border-b border-white/5 py-0.5";
+                    p.innerText = err;
+                    errCont.appendChild(p);
+                });
+            }
+
+            const ctx = $('sensorChart').getContext('2d');
+            if(myChart) myChart.destroy();
+
+            myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: record.data.timestamps,
+                    datasets: [
+                        { label: 'Voltaj (V)', data: record.data.volt, borderColor: '#10b981', borderWidth: 2, tension: 0.2, pointRadius: 0, yAxisID: 'yVolt' },
+                        { label: 'Basınç (PSI)', data: record.data.basinc, borderColor: '#0ea5e9', borderWidth: 2, tension: 0.2, pointRadius: 0, yAxisID: 'yPsi' },
+                        { label: 'Kmp NTC (°C)', data: record.data.kmpNtc, borderColor: '#f59e0b', borderWidth: 2, tension: 0.2, pointRadius: 0, yAxisID: 'yTemp' },
+                        { label: 'Bat NTC (°C)', data: record.data.batNtc, borderColor: '#ef4444', borderWidth: 2, tension: 0.2, pointRadius: 0, yAxisID: 'yTemp' }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: { legend: { labels: { color: '#94a3b8', boxWidth: 8, font: {size: 8} } } },
+                    scales: {
+                        x: { display: false },
+                        yVolt: { type: 'linear', display: true, position: 'left', ticks: { color: '#10b981', font:{size:8} }, grid:{drawOnChartArea:false} },
+                        yPsi: { type: 'linear', display: true, position: 'right', ticks: { color: '#0ea5e9', font:{size:8} }, grid:{drawOnChartArea:false} },
+                        yTemp: { type: 'linear', display: true, position: 'left', ticks: { color: '#f59e0b', font:{size:8} }, grid:{color:'#1e293b'} }
+                    }
+                }
+            });
+            $('view-logs').scrollTo({ top: 300, behavior: 'smooth' });
+        }
+
+        function closeChart() { $('diveChartCard').style.display = 'none'; }
+
+        // Sekmeler Arası Geçiş
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => { btn.classList.remove('active'); btn.classList.add('text-slate-500'); });
+            document.querySelectorAll('main > div[id^="view-"]').forEach(view => view.style.display = 'none');
+            
+            $('tab-' + tabId).classList.add('active');
+            $('tab-' + tabId).classList.remove('text-slate-500');
+            $('view-' + tabId).style.display = 'block';
+
+            if(tabId === 'logs') { renderDiveHistory(); renderErrorLogs(); }
+            if(tabId === 'controls') { 
+                renderTotalRuntime(); 
+                // Input değerlerini güncel limitlerle eşitle
+                $('input-press-min').value = limits.basinc.min;
+                $('input-press-max').value = limits.basinc.max;
+            }
+        }
+
+        // Donanım Modüllerini Aç/Kapat ve Kaydet
+        function openModuleModal() { $('module-modal').style.display = 'flex'; }
+        function closeModuleModal() { $('module-modal').style.display = 'none'; }
+
+        function updateModules() {
+            activeModules.depth = $('mod-depth').checked;
+            activeModules.co = $('mod-co').checked;
+            activeModules.bio = $('mod-bio').checked;
+            activeModules.gps = $('mod-gps').checked;
+
+            localStorage.setItem('akua_activeModules', JSON.stringify(activeModules));
+            applyModuleVisibility();
+        }
+
+        function applyModuleVisibility() {
+            $('mod-depth').checked = activeModules.depth;
+            $('mod-co').checked = activeModules.co;
+            $('mod-bio').checked = activeModules.bio;
+            $('mod-gps').checked = activeModules.gps;
+
+            $('wrapper-depth').style.display = activeModules.depth ? 'grid' : 'none';
+            $('card-co').style.display = activeModules.co ? 'block' : 'none';
+            $('card-bio').style.display = activeModules.bio ? 'block' : 'none';
+            $('card-gps').style.display = activeModules.gps ? 'block' : 'none';
+        }
+
+        // Hava Basıncı Limitlerini Kaydetme Fonksiyonu (Kontrol Sekmesinden)
+        function savePressureLimit(type) {
+            let val;
+            if(type === 'min') {
+                val = parseFloat($('input-press-min').value);
+                limits.basinc.min = val;
+            } else {
+                val = parseFloat($('input-press-max').value);
+                limits.basinc.max = val;
+            }
+            localStorage.setItem('akua_limits', JSON.stringify(limits));
+            showMsg("Limit Güncellendi", `Basınç ${type === 'min' ? 'alt' : 'üst'} limiti ${val} PSI olarak ayarlandı.`);
+        }
+
+        // Limit Belirleme Ekranı (Operasyon Sekmesinden Tıklanınca Açılan Modal)
+        function openLimitModal(sensorKey, title) {
+            $('limitSensorKey').value = sensorKey;
+            $('limitModalTitle').innerText = title + " LİMİTİ";
+            $('limitMin').value = limits[sensorKey].min;
+            $('limitMax').value = limits[sensorKey].max;
+            $('limit-modal').style.display = 'flex';
+        }
+
+        function closeLimitModal() { $('limit-modal').style.display = 'none'; }
+
+        // Operasyon sekmesinden limit ayarlama işlemi
+        function saveLimit() {
+            let key = $('limitSensorKey').value;
+            let min = parseFloat($('limitMin').value);
+            let max = parseFloat($('limitMax').value);
+            
+            limits[key] = { min: min, max: max };
+            localStorage.setItem('akua_limits', JSON.stringify(limits));
+            closeLimitModal();
+            showMsg("Limit Kaydedildi", key.toUpperCase() + " sınır değerleri kaydedildi.");
+        }
+
+        // Servis Erişimi Bölümünü Aç/Kapat
+        function toggleServiceAccess() {
+            let panel = $('service-access-panel');
+            let header = $('service-access-header');
+            if (panel.style.display === 'none') {
+                panel.style.display = 'block';
+                header.innerText = "SERVİS ERİŞİMİNİ GİZLE";
+            } else {
+                panel.style.display = 'none';
+                header.innerText = "SERVİS ERİŞİSİMİ";
+            }
+        }
+
+        // Genel Uyarı/Bilgi Balonu
+        function showMsg(title, text) {
+            let msgBox = $('msg-box');
+            $('msg-title').innerText = title;
+            $('msg-text').innerText = text;
+            msgBox.classList.remove('opacity-0', 'pointer-events-none');
+            setTimeout(() => { msgBox.classList.add('opacity-0', 'pointer-events-none'); }, 3000);
+        }
+
+        function sendCommand(cmd) {
+            showMsg("Sinyal İletildi", cmd);
+            if(cmd === "MOD_TOGGLE") {
+                isSystemOn = !isSystemOn;
+            }
+        }
+
+        // Canlı veri simülatörünün saniyede bir tetiklenmesi
+        setInterval(() => { processBLEData(null); }, 2000); 
+
+        // Başlangıç Kurulumu
+        renderTotalRuntime();
+        applyModuleVisibility();
+    </script>
+</body>
 </html>
